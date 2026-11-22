@@ -1,0 +1,25 @@
+# Dependencias y artefactos generados
+node_modules/
+dist/
+coverage/
+
+# Bases de datos locales y copias de seguridad
+server/data/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+
+# Entorno
+.env
+.env.local
+
+# Editores y sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Registros
+*.log
+npm-debug.log*
