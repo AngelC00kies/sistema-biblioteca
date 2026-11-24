@@ -22,7 +22,7 @@ Frontend React (Vista MVC)  ⇄  API REST/JSON  ⇄  Backend Express (Controlado
 | **Vista** | `client/` — páginas React + componentes | Renderizar, validar en cliente, mostrar errores e indicadores de carga. |
 | **Controlador** | `server/` — `controllers/*` | Recibir la petición HTTP, ejecutar validación Zod, invocar al servicio y traducir su resultado a código HTTP/JSON. |
 | **Modelo** | `server/` — `services/*` + `repositories/*` + tablas SQLite | Reglas de negocio (loan, multa, reserva) y persistencia. |
-| **Enrutador (Vista→Controlador)** | `server/` — `routes/*` | Mapear método+URL al controlador y encadenar `authenticate`/`authorize`/`validate`. |
+| **Enrutador (Vista→Controlador)** | `server/` — `src/modules/*/routes.ts` | Mapear método+URL al controlador y encadenar `authenticate`/`requireRole`/`validateBody`/`validateQuery`. |
 
 ---
 
@@ -76,31 +76,32 @@ Frontend React (Vista MVC)  ⇄  API REST/JSON  ⇄  Backend Express (Controlado
 ### 4.2 Capa de transporte / API
 
 - Protocolo **HTTP/1.1 + JSON**, prefijo `/api`.
-- Middlewares en orden: `helmet` → `cors` (lista blanca) → `express-rate-limit` → `express.json()` → `authenticate` → `validate(schema)` → controlador.
-- Errores normalizados: `{ "error": { "code": "EJEMPLAR_NO_DISPONIBLE", "message": "…" } }` con códigos 400/401/403/404/409/429/500.
+- Middlewares globales en orden: `helmet` → `cors` (lista blanca) → `express.json({ limit: '1mb' })` → `clientIp` → `express-rate-limit` (500/15 min) → rutas. Por ruta: `authenticate` → `requireRole(...)` → `validateBody(schema)`/`validateQuery(schema)` → controlador.
+- Errores normalizados: `{ "ok": false, "code": "BUSINESS_RULE_VIOLATION", "message": "…" }` con códigos 400/401/403/404/409/422/429/500 (`BAD_REQUEST`, `INVALID_TOKEN`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `BUSINESS_RULE_VIOLATION`, `CONSTRAINT_VIOLATION`, `RATE_LIMITED`, `ROUTE_NOT_FOUND`, `INTERNAL_ERROR`; `VALIDATION_ERROR` queda como rama defensiva de `ZodError` sin pasar por el validador).
 
 ### 4.3 Capa de presentación del servidor: **Rutas**
 
-Mapean `método + path` → controlador y declaran autorizaciones:
+Mapean `método + path` → controlador y declaran autorizaciones. **39 rutas de recursos + `GET /api/health` = 40 endpoints** (matriz completa en doc. 08, §3):
 
-| Grupo | Rutas principales | Autorización |
+| Grupo | Rutas | Autorización |
 |---|---|---|
-| Auth | `POST /api/auth/login`, `POST /api/auth/register`, `GET /api/auth/me` | login público; register → admin |
-| Usuarios | `GET/POST /api/users`, `PUT/DELETE /api/users/:id` | admin |
-| Categorías | `GET /api/categories`, `POST`, `PUT/DELETE /:id` | GET público; escritura → admin/librarian |
-| Libros | `GET /api/books` (q, category_id, page, limit), `GET /api/books/:id`, `POST /api/books`, `PUT/DELETE /api/books/:id`, `GET/POST /api/books/:id/copies` | lectura público; escritura → admin/librarian |
-| Ejemplares | `PUT /api/copies/:id` | admin/librarian |
-| Préstamos | `POST /api/loans`, `POST /api/loans/:id/return`, `GET /api/loans`, `GET /api/loans/my` | escritura → admin/librarian; `my` → autenticado |
-| Reservas | `POST /api/reservations`, `GET /api/reservations`, `POST /api/reservations/:id/cancel`, `POST /api/reservations/:id/fulfill` | creación → autenticado; listado → admin/librarian (propias en `member`) |
-| Multas | `GET /api/fines`, `GET /api/fines/my`, `POST /api/fines/:id/pay` | global → admin/librarian; `my`/`pay` → autenticado |
-| Reportes | `GET /api/reports/summary`, `GET /api/reports/top-books`, `GET /api/reports/overdue` | admin/librarian |
-| Auditoría | bitácora (interna del módulo de auditoría) | admin |
+| Salud | `GET /api/health` | público |
+| Auth | `POST /api/auth/login`, `POST /api/auth/register`, `GET /api/auth/me` | login público + rate limit; register → `requireRole('admin')`; me → `authenticate` |
+| Usuarios | `GET /api/users`, `GET /api/users/:id`, `POST /api/users`, `PUT/DELETE /api/users/:id` | `authenticate` en todo el router; rol por ruta (`listUsersGuard` para el listado, `requireRole('admin')` en el resto) |
+| Categorías | `GET /api/categories`, `GET /api/categories/:id`, `POST`, `PUT /:id`, `DELETE /:id` | lectura → `authenticate`; escritura → `requireRole(...STAFF_ROLES)`; DELETE → `requireRole('admin')` |
+| Libros | `GET /api/books` (`search`, `categoryId`, `available`, `page`, `pageSize`), `GET /api/books/:id`, `POST`, `PUT /:id`, `DELETE /:id`, `GET/POST /api/books/:id/copies` | lectura → `authenticate`; crear/editar → `STAFF_ROLES`; DELETE → `admin` |
+| Ejemplares | `PUT /api/copies/:id`, `DELETE /api/copies/:id` | PUT → `STAFF_ROLES`; DELETE → `admin` |
+| Préstamos | `POST /api/loans`, `POST /api/loans/:id/return`, `GET /api/loans`, `GET /api/loans/:id`, `GET /api/loans/my` | escritura → `STAFF_ROLES`; lectura → `authenticate` (los `member` ven solo lo propio) |
+| Reservas | `POST /api/reservations`, `GET /api/reservations`, `GET /api/reservations/my`, `POST /api/reservations/:id/cancel`, `POST /api/reservations/:id/fulfill` | creación/cancelación → `authenticate` + propiedad; listado → `authenticate` (propias en `member`); fulfill → `STAFF_ROLES` |
+| Multas | `GET /api/fines`, `GET /api/fines/my`, `POST /api/fines/:id/pay` | global → `STAFF_ROLES`; `my`/`pay` → `authenticate` + propiedad |
+| Reportes | `GET /api/reports/summary`, `GET /api/reports/top-books`, `GET /api/reports/overdue` | `router.use(authenticate, requireRole(...STAFF_ROLES))` |
+| Auditoría | `GET /api/audit` | `router.use(authenticate, requireRole('admin'))` |
 
 ### 4.4 Capa de controladores
 
-- Extraen `req.body/params/query`, ejecutan `validate` con Zod, llaman **una sola vez** al servicio y devuelven la respuesta.
-- **No** contienen reglas de negocio ni SQL; su complejidad máxima es la traducción HTTP.
-- Devuelven códigos estándar: 200 (consulta), 201 (creación), 204 (borrado), 4xx (regla/validación), 500 (error no previsto).
+- Extraen `req.body/params/query`, ejecutan `validateBody`/`validateQuery` con Zod, llaman **una sola vez** al servicio y devuelven la respuesta.
+- **No** contienen reglas de negocio ni SQL; su complejidad máxima es la traducción HTTP y, en su caso, la comprobación de **propiedad** del recurso (ej. `GET /api/loans/:id` para `member`).
+- Devuelven códigos estándar: 200 (consulta), 201 (creación), 200 con `data.mode` en el borrado, 4xx (regla/validación), 500 (error no previsto).
 
 ### 4.5 Capa de servicios (corazón del MVC)
 
@@ -127,7 +128,7 @@ Los servicios son los únicos que conocen **múltiples** repositorios y abren **
 ### 4.7 Capa de datos
 
 - **SQLite** en archivo con `PRAGMA foreign_keys = ON`, `journal_mode = WAL` y `busy_timeout`.
-- Índices: `idx_books_title`, `idx_books_author`, `idx_books_isbn`, `idx_copies_book`, `idx_copies_status`, `idx_loans_user_status`, `idx_loans_status`, `idx_reservations_book_status`, `idx_fines_user_status`, `idx_audit_user_created`, `idx_audit_entity`.
+- Índices reales (16 en total sobre 6 de las 8 tablas): `idx_books_title`, `idx_books_author`, `idx_books_category`, `idx_copies_book`, `idx_copies_status`, `idx_loans_user`, `idx_loans_copy`, `idx_loans_status`, `idx_loans_due`, `idx_reservations_book`, `idx_reservations_user`, `idx_fines_user`, `idx_fines_status`, `idx_audit_user`, `idx_audit_created` + el índice **único parcial** `uq_reservations_active` (lista completa en doc. 06, §4). `users` y `categories` no llevan índices propios: sus consultas son por UNIQUE (`username`, `email`, `name`) o por pocos registros.
 - Copias de seguridad diarias (ver doc. 08).
 
 ---
@@ -139,16 +140,17 @@ Los servicios son los únicos que conocen **múltiples** repositorios y abren **
 | 1 | Red / proxy | El navegador envía `POST /api/loans` con `Authorization: Bearer <jwt>` y JSON | — |
 | 2 | `helmet` | Fija cabeceras de seguridad y CSP | — |
 | 3 | `cors` | Valida el origen contra la lista blanca | 403 CORS si no coincide |
-| 4 | `express-rate-limit` | Cuenta la petición por IP | 429 al superar 100/15 min |
-| 5 | `express.json()` | Parsea el cuerpo | 400 si el JSON está mal formado |
-| 6 | `authenticate` | Decodifica y verifica el JWT (expiración 8 h) | 401 sin token / inválido / expirado |
-| 7 | `authorize('admin','librarian')` | Compara `req.user.role` con la lista permitida | 403 si el rol no calza |
-| 8 | `validate(createLoanSchema)` | Valida `copy_id`, `user_id` con Zod | 400 con detalle por campo |
-| 9 | `LoanController.crear` | Delega al servicio | — |
-| 10 | `LoanService.crear` | Consulta usuario, multas, préstamos activos y ejemplar; aplica RF-24…RF-27 | 403/409 con `code` específico |
-| 11 | Transacción | `BEGIN` → `INSERT loans` → `UPDATE copies` → `INSERT audit_logs` → `COMMIT` | `ROLLBACK` + 500 en cualquier fallo |
-| 12 | Repositorios | Ejecutan SQL parametrizado | — |
-| 13 | Controlador | Devuelve `201` con `{id, loan_date, due_date}` | — |
+| 4 | `express-rate-limit` | Cuenta la petición por IP | 429 al superar 500/15 min |
+| 5 | `express.json()` | Parsea el cuerpo (límite 1 MB) | 400 si el JSON está mal formado |
+| 6 | `authenticate` | Verifica firma y expiración del JWT (8 h) | 401 `INVALID_TOKEN` sin token / inválido / expirado |
+| 7 | `requireRole(...STAFF_ROLES)` | Compara `req.user.role` con `['admin','librarian']` | 403 `FORBIDDEN` si el rol no calza |
+| 8 | `validateBody(createLoanSchema)` | Valida `copyId`, `memberId` (y `dueDate`, `notes`) con Zod | 400 `BAD_REQUEST` con `details` por campo |
+| 9 | `loansController.create` | Traduce HTTP y delega | — |
+| 10 | `loansService.create` | Consulta ejemplar, socio, multas y préstamos activos; aplica RF-24…RF-31 | 422 `BUSINESS_RULE_VIOLATION` / 404 / 400 |
+| 11 | Transacción | `BEGIN` → `INSERT loans` → `UPDATE copies` → `COMMIT` | `ROLLBACK` + 500 en cualquier fallo |
+| 12 | Auditoría | `audit()` inserta `LOAN_CREATED` **después** del `COMMIT` (si falla, solo se loguea el error y el préstamo persiste) | — |
+| 13 | Repositorios | Ejecutan SQL parametrizado | — |
+| 13 | Controlador | Devuelve `201` con el préstamo (`status`, `due_date`, `book_title`…) | — |
 | 14 | Cliente | Actualiza estado y muestra el aviso con la fecha de vencimiento | — |
 | 15 | `errorHandler` | Captura cualquier error no manejado y lo normaliza sin exponer stack trace | 500 genérico |
 
@@ -169,7 +171,7 @@ graph TB
   end
 
   subgraph SRV["Servidor - equipo de la biblioteca (Node.js 22)"]
-    subgraph PROC["Proceso 1: API Express (puerto 3000)"]
+    subgraph PROC["Proceso 1: API Express (puerto 4000)"]
       MW["helmet - cors - rate-limit - zod - jwt"]
       API2["Router /api/* -> controllers -> services -> repositories"]
     end
@@ -187,7 +189,7 @@ graph TB
     W3["PC publica consulta catalogo"]
   end
 
-  B1 -->|HTTP/JSON :3000| SW
+  B1 -->|HTTP/JSON :4000| SW
   W1 --> SW
   W2 --> SW
   W3 --> SW
@@ -205,7 +207,7 @@ graph TB
 
 ### Explicación del diagrama de despliegue
 
-El diagrama muestra el **despliegue real en la Biblioteca "Ricardo Gómez"**: un único equipo servidor ejecuta el proceso Node 22 —que expone la API en el puerto 3000 y además sirve el bundle estático generado por Vite (`client/dist`)—, el archivo de base de datos `biblioteca.db` con sus archivos WAL, la carpeta de copias de seguridad y el registro de auditoría. Los usuarios no instalan nada: cualquier navegador de las estaciones de trabajo (bibliotecario, dirección, PC de consulta pública) o de la red de la biblioteca accede por HTTP sobre la LAN.
+El diagrama muestra el **despliegue real en la Biblioteca "Ricardo Gómez"**: un único equipo servidor ejecuta el proceso Node 22 —que expone la API en el puerto 4000 y, en desarrollo, el bundle estático de Vite (`client/dist`) se sirve en el 5173 con proxy hacia la API—, el archivo de base de datos `biblioteca.db` con sus archivos WAL, la carpeta de copias de seguridad y el registro de auditoría. Los usuarios no instalan nada: cualquier navegador de las estaciones de trabajo (bibliotecario, dirección, PC de consulta pública) o de la red de la biblioteca accede por HTTP sobre la LAN.
 
 Se eligió este diagrama porque responde la pregunta operativa **"¿dónde corre y cómo se accede?"**: no hay CDN, ni contenedores, ni servicios cloud, coherente con la decisión descartada de microservicios y con la exigencia de operar sin dependencias externas (RD-06). La separación entre proceso API y archivos estáticos dentro del mismo host permite que la copia de seguridad diaria se ejecute con un simple comando sobre el archivo mientras el servidor sigue operando en modo WAL. El corte de red o de energía se mitiga con el modo WAL (RD-07) y con la restauración en ≤ 15 minutos (RD-04).
 

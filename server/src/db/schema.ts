@@ -66,9 +66,14 @@ CREATE TABLE IF NOT EXISTS reservations (
   status     TEXT    NOT NULL DEFAULT 'pending'
                CHECK (status IN ('pending','ready','fulfilled','cancelled')),
   created_at TEXT    NOT NULL DEFAULT (datetime('now')),
-  expires_at TEXT    NOT NULL,
-  UNIQUE (book_id, user_id, status)
+  expires_at TEXT    NOT NULL
 );
+
+-- Solo puede existir UNA reserva activa por (libro, socio);
+-- las canceladas/atendidas no bloquean reservas futuras.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_reservations_active
+  ON reservations (book_id, user_id)
+  WHERE status = 'pending' OR status = 'ready';
 
 CREATE TABLE IF NOT EXISTS fines (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,

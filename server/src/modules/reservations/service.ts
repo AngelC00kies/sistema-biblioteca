@@ -3,7 +3,6 @@ import { errors } from '../../errors/AppError.js';
 import { audit } from '../../utils/logger.js';
 import { addDays, todayISO } from '../../utils/date.js';
 import { booksRepository, type BookRow } from '../books/repository.js';
-import { loansRepository } from '../loans/repository.js';
 import {
   reservationsRepository,
   type ReservationView,
@@ -125,11 +124,5 @@ export const reservationsService = {
     const updated = reservationsRepository.findById(id);
     if (!updated) throw errors.notFound('Reserva');
     return updated;
-  },
-
-  /** Indica si el libro tiene algún préstamo activo (para la regla de reserva). */
-  hasActiveLoan(bookId: number): boolean {
-    const copies = booksRepository.findCopies(bookId);
-    return copies.some((copy) => loansRepository.findActiveByCopy(copy.id) !== undefined);
   },
 };

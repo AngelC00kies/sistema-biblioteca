@@ -1,7 +1,7 @@
 # 07 — Interfaces de usuario (prototipos)
 
 **Proyecto:** Sistema de Gestión de Biblioteca (SGB)
-**Documento:** Prototipos de las 11 pantallas del sistema, con su layout simulado en Mermaid (`graph TD`), campos, validaciones y flujo de interacción.
+**Documento:** Prototipos de las vistas del sistema (9 páginas React / 11 rutas), con su layout simulado en Mermaid (`graph TD`), campos, validaciones y flujo de interacción.
 
 > **Convención:** cada pantalla se representa con un bloque ` ```mermaid ` tipo `graph TD` cuyos nodos reproducen el esqueleto de la interfaz (cabecera, formularios, tablas, botones, mensajes). Le sigue la especificación de campos, validaciones (cliente y servidor con Zod) y flujo. El mapa de navegación general se encuentra al final del documento.
 
@@ -13,12 +13,12 @@
 graph TD
   L["PANTALLA DE INICIO DE SESION<br/>Sistema de Gestion de Biblioteca<br/>Biblioteca Municipal Ricardo Gomez"] --> CARD["Tarjeta de acceso centrada<br/>ancho 380px"]
   CARD --> T1["Logo / nombre institucional"]
-  T1 --> F1["input: Usuario<br/>required, 3-30 caracteres"]
-  F1 --> F2["input: Contrasena<br/>required, min 8, tipo password + ojo"]
-  F2 --> ERR["msg de error (aria-live)<br/>'Credenciales invalidas' /<br/>'Usuario inactivo' / validacion"]
+  T1 --> F1["input: Usuario<br/>required, 3-50 caracteres"]
+  F1 --> F2["input: Contrasena<br/>required, min 6, tipo password + ojo"]
+  F2 --> ERR["msg de error (aria-live)<br/>'Usuario o contrasena incorrectos' /<br/>'La cuenta esta inactiva' / validacion"]
   ERR --> B1[("boton: INGRESAR<br/>type submit, deshabilitado mientras carga")]
   B1 --> SP["spinner 'Verificando...'"]
-  SP --> OK["redirect: /dashboard (admin, librarian)<br/>redirect: /catalogo (member)"]
+  SP --> OK["redirect: / (o la ruta from pendiente)<br/>para cualquier rol"]
   OK --> TOAST["toast de bienvenida<br/>+ usuario y rol"]
   L --> LINK["link: 'Contacte al administrador<br/>si olvido su contrasena'"]
 
@@ -29,16 +29,16 @@ graph TD
 
 **Campos**
 
-| Campo | Tipo | Obligatorio | Validación cliente | Validación servidor (Zod) |
+| Campo | Tipo | Obligatorio | Validación cliente | Validación servidor (Zod `loginSchema`) |
 |---|---|---|---|---|
-| `username` | text | Sí | No vacío, 3–30, sin espacios al borde | `z.string().min(3).max(30)` |
-| `password` | password | Sí | Mín. 8 caracteres | `z.string().min(8).max(72)` |
+| `username` | text | Sí | `required`, sin espacios al borde | `z.string().min(3).max(50)` |
+| `password` | password | Sí | `required` | `z.string().min(6).max(100)` |
 
-**Flujo:** el formulario se envía con `POST /api/auth/login`. En 400 se pintan mensajes por campo; en 401 se muestra el mensaje genérico "Credenciales inválidas" junto al bloque de errores; en 403 "Usuario inactivo, contacte al administrador"; en 429 "Demasiados intentos, intente en 15 minutos". El botón permanece deshabilitado con spinner durante la petición (RU-05). Con 200 se guarda el token, se llama `GET /api/auth/me` y se redirige según rol (RU-07).
+| **Flujo:** el formulario se envía con `POST /api/auth/login`. En 400 se pinta `BAD_REQUEST` con `details` (`campo: mensaje` vía `errorMessage`); en 401 se muestra el mensaje genérico "Usuario o contraseña incorrectos" junto al bloque de errores; en 403 "La cuenta está inactiva. Contacta al administrador"; en 429 `RATE_LIMITED` "Demasiados intentos de inicio de sesión". El botón permanece deshabilitado con spinner durante la petición (RU-05). Con 200 se guarda el token, se llama `GET /api/auth/me` y se navega a `/` (o a la ruta `from` que originó el login) — todas las rutas se filtran después por rol en el menú (RU-07).
 
 ---
 
-## 2. Dashboard / pantalla principal (`/dashboard`)
+## 2. Dashboard / pantalla principal (`/`)
 
 ```mermaid
 graph TD
@@ -80,9 +80,9 @@ graph TD
   H["Gestion de libros"] --> TOOL["Barra de herramientas<br/>input: buscar por titulo, autor o ISBN (debounce 300ms)<br/>select: categoria (GET /api/categories)<br/>select: estado de disponibilidad"]
   TOOL --> N[("boton: + Nuevo libro (admin/librarian)")]
   TOOL --> TB["Tabla paginada<br/>col: ISBN | Titulo | Autor | Editorial | Año |<br/>Categoria | Ejemplares (disp/total) | acciones"]
-  TB --> PG["paginacion: page, limit (25/50/100)<br/>+ 'Mostrando 1-25 de 1.284'"]
+  TB --> PG["paginacion: page, pageSize (por defecto 12)<br/>+ 'Mostrando 1-12 de 1.284'"]
 
-  N --> FORM["MODAL / RUTA: Formulario de libro<br/>input ISBN (req, formato 10/13, unico)<br/>input Titulo (req, 2-200)<br/>input Autor (req, 2-120)<br/>input Editorial (opcional)<br/>input Anio de publicacion (1400-hoy)<br/>select Categoria (req, FK)<br/>textarea Descripcion (max 1000)"]
+  N --> FORM["MODAL / RUTA: Formulario de libro<br/>input ISBN (req, 10-17, unico)<br/>input Titulo (req, 2-200)<br/>input Autor (req, 2-120)<br/>input Editorial (opcional)<br/>input Anio de publicacion (1400-hoy)<br/>select Categoria (opcional, FK)<br/>textarea Descripcion (max 2000)"]
   FORM --> SV[("boton: Guardar")]
   FORM --> CL[("boton: Cancelar")]
   SV --> OK["toast: 'Libro creado' + refresca tabla"]
@@ -101,21 +101,21 @@ graph TD
 
 **Campos y validaciones (esquema `createBookSchema`)**
 
-| Campo | Zod | Notas |
+| Campo | Zod (`bookSchema`) | Notas |
 |---|---|---|
-| `isbn` | `z.string().regex(/^\d{10}(\d{3})?$/)`, unico | RF-16 → 409 |
+| `isbn` | `z.string().min(10).max(17).regex(/^[0-9X-]+$/)`, unico | RF-16 → 409 `CONFLICT` |
 | `title` | `z.string().min(2).max(200)` | — |
 | `author` | `z.string().min(2).max(120)` | — |
-| `publisher` | `z.string().max(120).optional()` | — |
-| `publication_year` | `z.number().int().min(1400).max(añoActual)` | CHECK en BD |
-| `category_id` | `z.number().int().positive()` | FK → 409 si categoría borrada |
-| `description` | `z.string().max(1000).optional()` | — |
+| `publisher` | `z.string().max(120).nullish()` | — |
+| `publicationYear` | `z.number().int().min(1400).max(añoActual+1).nullish()` | CHECK en BD |
+| `categoryId` | `z.number().int().positive().nullish()` | FK → 400 si la categoría no existe |
+| `description` | `z.string().max(2000).nullish()` | — |
 
-**Flujo:** búsqueda y filtro disparan `GET /api/books?q=&category_id=&page=&limit=`; al abrir la ficha (`/libros/:id`) se muestra la lista de ejemplares con su estado. Eliminar exige confirmación nombrando el recurso (RU-04) y responde 409 si hay histórico de préstamos.
+**Flujo:** búsqueda y filtro disparan `GET /api/books?search=&categoryId=&available=&page=&pageSize=`; al abrir la ficha se muestra un **modal de ejemplares** (`GET /api/books/:id/copies`) con su estado. Eliminar exige confirmación nombrando el recurso (RU-04) y responde 422 `BUSINESS_RULE_VIOLATION` si algún ejemplar tiene préstamo activo.
 
 ---
 
-## 4. Gestión de ejemplares (`/libros/:id` → pestaña "Ejemplares")
+## 4. Gestión de ejemplares (`/libros` → modal "Ejemplares")
 
 ```mermaid
 graph TD
@@ -143,21 +143,21 @@ graph TD
 
 **Campos y validaciones**
 
-| Campo | Zod | Regla de negocio |
+| Campo | Zod (`copySchema`) | Regla de negocio |
 |---|---|---|
-| `inventory_code` | `z.string().min(3).max(30)` + unico | RF-20 → 409 duplicado |
-| `condition` | enum (`Nueva`,`Buena`,`Regular`,`Dañada`) | Informativo |
-| `status` | enum `available\|loaned\|lost\|maintenance` | RF-21: la transición a `available` está bloqueada si existe préstamo activo; `lost`/`maintenance` sacan el ejemplar del préstamo. |
+| `inventoryCode` | `z.string().min(3).max(40).regex(/^[A-Za-z0-9._-]+$/)` + unico | RF-20 → 409 duplicado |
+| `condition` | enum `good\|regular\|damaged` (default `good`) | Informativo |
+| `status` (solo en `PUT`) | enum `available\|loaned\|lost\|maintenance` | RF-21: la transición a `available` está bloqueada si existe préstamo activo (422); `lost`/`maintenance` sacan el ejemplar del préstamo. |
 
 **Flujo:** se accede desde la ficha del libro; cada cambio llama `PUT /api/copies/:id` y refresca contadores del libro. Las acciones destructivas (marcar `lost`) piden confirmación con el código del ejemplar.
 
 ---
 
-## 5. Registrar préstamo (`/prestamos/nuevo`)
+## 5. Registrar préstamo (`/prestamos` — sección "Registrar préstamo")
 
 ```mermaid
 graph TD
-  P["REGISTRAR PRESTAMO"] --> U["Paso 1 - Buscar usuario<br/>input: nombre, username o email<br/>GET /api/users?q= (admin) / listado interno<br/>tabla resultado: nombre | rol | estado | prestamos activos | deuda"]
+  P["REGISTRAR PRESTAMO"] --> U["Paso 1 - Buscar usuario<br/>input: nombre o username<br/>GET /api/users?role=member&status=active&search= (admin o librarian)<br/>tabla resultado: nombre | rol | estado | prestamos activos | deuda"]
   U --> UC["card seleccionada: Maria Gomez<br/>status: active | 2/5 prestamos | sin deuda  (check verde)"]
   UC --> UB["alert si bloqueado:<br/>'Usuario inactivo' |<br/>'Tiene multa pendiente $3,50' |<br/>'Limite 5 prestamos alcanzado'"]
 
@@ -167,7 +167,7 @@ graph TD
 
   CC --> R["Paso 3 - Resumen<br/>Fecha de prestamo: hoy<br/>Fecha de vencimiento: hoy + 14 dias (resaltada)<br/>Observaciones: textarea opcional"]
   R --> CF2[("boton: Confirmar prestamo")]
-  CF2 --> LO["POST /api/loans {copy_id, user_id}"]
+  CF2 --> LO["POST /api/loans {copyId, memberId, dueDate}"]
   LO --> OK2["PANTALLA DE EXITO<br/>'Prestamo #1287 registrado'<br/>Vence: 05/12/2026 | ejemplar -> loaned<br/>[Imprimir comprobante] [Nuevo prestamo]"]
   LO --> E409X["alert 409 con code y mensaje"]
 
@@ -180,16 +180,16 @@ graph TD
 **Validaciones**
 
 - **Cliente:** los dos pasos deben tener selección antes de habilitar "Confirmar"; se muestra la fecha de vencimiento calculada (RU-10).
-- **Servidor (`createLoanSchema`):** `copy_id` y `user_id` enteros positivos; luego el servicio aplica RF-24…RF-27 en este orden: ejemplar `available` → usuario `active` → sin multas `pending` → menos de 5 préstamos activos. Cada rechazo se pinta en la alerta correspondiente con su `code`.
+- **Servidor (`createLoanSchema`):** `copyId` y `memberId` enteros positivos, `dueDate` opcional (`YYYY-MM-DD`, debe ser futura); luego el servicio aplica RF-24…RF-31 en este orden: ejemplar `available` → usuario `active` → sin multas `pending` → menos de 5 préstamos activos. Cada rechazo se pinta en la alerta correspondiente con su `code` (422 `BUSINESS_RULE_VIOLATION`).
 - **Flujo alternativo:** si el usuario tiene deuda, la alerta incluye el botón "Ver multas" para que el bibliotecario pueda registrar el pago antes de prestar (RF-48).
 
 ---
 
-## 6. Devolución (`/devoluciones`)
+## 6. Devolución (`/prestamos` — botón "Registrar devolución" por fila)
 
 ```mermaid
 graph TD
-  D["DEVOLUCION DE LIBROS"] --> B2["Buscar prestamo<br/>input: codigo de inventario | ISBN | usuario<br/>GET /api/loans?status=active&q="]
+  D["DEVOLUCION DE LIBROS"] --> B2["Buscar prestamo<br/>input: codigo de inventario | ISBN | usuario<br/>GET /api/loans?status=active&search="]
   B2 --> L2["Ficha de prestamo #1287<br/>Libro: El principito | Ejemplar: INV-00421<br/>Usuario: Maria Gomez<br/>Prestamo: 21/11/2026 | Vence: 05/12/2026<br/>Dias de atraso: 3 (si aplica, en rojo)"]
   L2 --> COND["pregunta: condicion del ejemplar<br/>radio: [Buena] [Danada -> pasa a maintenance]"]
   COND --> RV[("boton: Registrar devolucion")]
@@ -207,7 +207,7 @@ graph TD
 
 **Validaciones y reglas**
 
-- Se busca por `GET /api/loans?status=active&q=…`; solo aparecen préstamos activos.
+- Se busca por `GET /api/loans?status=active&search=…`; solo aparecen préstamos activos.
 - El servidor calcula `días_atraso = max(0, date(return_date) − date(due_date))` y la multa `× 0,50` (RF-31) **en la capa de servicios**, no en el cliente.
 - Si hay reserva `pending` del libro, la respuesta informa que pasó a `ready` (RF-32).
 - Estado del ejemplar: `available` por defecto; si se marca "Dañada" pasa a `maintenance` y no vuelve a estar prestable hasta que un administrador lo libere (RF-30).
@@ -225,7 +225,7 @@ graph TD
   T3 --> AC[("acciones: Registrar devolucion | Ver detalle")]
   T3 --> PG3["paginacion + total de registros"]
 
-  subgraph VISTA_MEMBER[" Vista member: /prestamos/mios (GET /api/loans/my)"]
+  subgraph VISTA_MEMBER[" Vista member: /mis-prestamos (GET /api/loans/my)"]
     T4["Tabla SOLO con los prestamos propios<br/>col: Libro | Prestamo | Vence | Estado | Multa<br/>columnas de otros usuarios ausentes (403 si se fuerza)"]
   end
 
@@ -239,10 +239,10 @@ graph TD
 
 **Comportamiento**
 
-- `GET /api/loans?status=&user_id=&date_from=&date_to=&page=&limit=` (RF-33), respuesta enriquecida con datos de usuario, libro y ejemplar por JOIN en el repositorio.
-- El endpoint `GET /api/loans/my` (RF-34) filtra siempre por `user_id = token.id`, por lo que forzar otro `user_id` en la URL no devuelve datos (RS-11).
+- `GET /api/loans?status=&search=&overdue=&memberId=` (RF-33), respuesta enriquecida con datos de usuario, libro y ejemplar por JOIN en el repositorio. El listado no pagina: devuelve el conjunto filtrado con `meta.total`.
+- El endpoint `GET /api/loans/my` (RF-34) filtra siempre por `user_id = token.id`; además, para un `member` el propio `GET /api/loans` fuerza ese filtro y `GET /api/loans/:id` devuelve 403 sobre préstamos ajenos (RS-11, ERR-10).
 - Los préstamos `overdue` se recalculan al listar (RF-35) y muestran días de atraso y multa estimada.
-- Paginación obligatoria con `limit ≤ 100` (RR-08).
+- Los filtros de texto se limitan a 120 caracteres y los listados devuelven `meta.total` (RR-08).
 
 ---
 
@@ -258,7 +258,7 @@ graph TD
   ACT --> CFX["dialogo: 'Cancelar la reserva de<br/>'Cien anos de soledad'? [No] [Si]'"]
   ACT --> FFX["al Cumplir: se valida que el libro<br/>tenga ejemplar disponible -> status fulfilled"]
 
-  subgraph ALTA["Alta desde la ficha del libro (/libros/:id)"]
+  subgraph ALTA["Alta desde el modal de ejemplares de /libros"]
     BTN[("boton: Reservar libro")]
     BTN --> R409A["409: 'Hay ejemplares disponibles, retire el libro'"]
     BTN --> R409B["409: 'Limite de 3 reservas activas'"]
@@ -323,7 +323,7 @@ graph TD
 
 ---
 
-## 10. Multas (`/multas` y `/multas/mias`)
+## 10. Multas (`/multas` y `/mis-multas`)
 
 ```mermaid
 graph TD
@@ -413,23 +413,20 @@ graph TD
 
 ```mermaid
 graph TD
-  LOGIN["/login"] -->|admin, librarian| DASH["/dashboard"]
-  LOGIN -->|member| CAT["/catalogo"]
+  LOGIN["/login"] -->|cualquier rol| DASH["/ (Panel principal)"]
   DASH --> LIB["/libros"]
-  DASH --> PRE["/prestamos"]
-  DASH --> DEV["/devoluciones"]
+  DASH --> PRE["/prestamos (admin, librarian)"]
+  DASH --> MIS1["/mis-prestamos"]
   DASH --> RES2["/reservas"]
-  DASH --> MUL["/multas"]
-  DASH --> REP2["/reportes"]
+  DASH --> MUL["/multas (admin, librarian)"]
+  DASH --> MIS3["/mis-multas"]
   DASH -->|admin| USR["/usuarios"]
+  DASH -->|admin, librarian| REP2["/reportes"]
   DASH -->|admin| AUD["/auditoria"]
-  DASH -->|admin, librarian| CAT2["/categorias"]
-  LIB --> EJE["/libros/:id (ficha + ejemplares)"]
-  CAT -->|member| MIS1["/prestamos/mios"]
-  CAT -->|member| MIS2["/reservas/mias"]
-  CAT -->|member| MIS3["/multas/mias"]
+  LIB --> EJE["modal: Ejemplares del libro<br/>alta y cambio de estado"]
+  LIB -->|Reservar (sin disponibilidad)| RES2
   MIS3 -->|pago| MUL
-  EJE -->|boton Reservar| RES2
+  STAR["ruta desconocida *"] --> DASH
 
   style LOGIN fill:#e8f4fd,stroke:#2c7be5
   style DASH fill:#eef9ee,stroke:#3aa655
@@ -437,20 +434,19 @@ graph TD
 
 ### Resumen de rutas y guardas
 
-| Ruta | Pantalla | Guarda de rol |
+| Ruta | Página React | Guarda de rol |
 |---|---|---|
-| `/login` | Inicio de sesión | pública |
-| `/dashboard` | Principal + KPIs | autenticado |
-| `/catalogo`, `/libros`, `/libros/:id` | Catálogo y ficha | autenticado (lectura) |
-| `/categorias` | CRUD categorías | admin, librarian |
-| `/prestamos`, `/prestamos/nuevo`, `/devoluciones` | Operación de préstamos | admin, librarian |
-| `/prestamos/mios` | Préstamos propios | member (y roles superiores) |
-| `/reservas` | Cola de reservas | admin, librarian |
-| `/reservas/mias` | Reservas propias | member |
-| `/usuarios` | CRUD usuarios | admin |
-| `/multas` | Multas globales | admin, librarian |
-| `/multas/mias` | Multas propias + pago | member |
-| `/reportes` | Reportes y consultas | admin, librarian |
-| `/auditoria` | Bitácora | admin |
+| `/login` | `LoginPage` | pública (con `from` para volver tras autenticar) |
+| `/` | `DashboardPage` | autenticado |
+| `/libros` | `BooksPage` (catálogo + modal de ejemplares + reserva) | autenticado (lectura); alta/edición solo `staff` |
+| `/prestamos` | `LoansPage` (alta, listado con filtros y devolución) | `admin`, `librarian` |
+| `/mis-prestamos` | `LoansPage` (`GET /api/loans/my`) | autenticado (el socio solo ve los suyos) |
+| `/reservas` | `ReservationsPage` (crear/cancelar propias; personal ve y cumple todas) | autenticado |
+| `/multas` | `FinesPage` (`GET /api/fines` con filtro) | `admin`, `librarian` |
+| `/mis-multas` | `FinesPage` (`GET /api/fines/my` + pago) | autenticado |
+| `/usuarios` | `UsersPage` | `admin` |
+| `/reportes` | `ReportsPage` | `admin`, `librarian` |
+| `/auditoria` | `AuditPage` | `admin` |
+| `*` | redirige a `/` | — |
 
-Todas las rutas protegidas están envueltas en un componente `ProtectedRoute` que verifica token y rol; ante 401/403 se redirige a `/login` con un mensaje (RU-07, RU-11).
+Todas las rutas protegidas están envueltas en `ProtectedRoute`. Ante **falta de sesión** redirige a `/login` conservando la ruta original en `state.from`; ante **rol no autorizado** no navega: muestra el mensaje "No tienes permisos para acceder a esta sección (rol requerido: …)" dentro de la ruta (RU-07). Si el servidor responde 401, el cliente limpia el token y el siguiente movimiento del usuario lo devuelve al login con aviso de sesión expirada (RU-11). El menú lateral (`Layout`) oculta las entradas que el rol no puede usar.

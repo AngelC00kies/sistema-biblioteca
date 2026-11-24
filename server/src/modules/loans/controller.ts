@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { errors } from '../../errors/AppError.js';
 import { loansService } from './service.js';
 
 export const loansController = {
@@ -29,7 +30,12 @@ export const loansController = {
   },
 
   async get(req: Request, res: Response): Promise<void> {
-    res.status(200).json({ ok: true, data: loansService.get(Number(req.params.id)) });
+    const loan = loansService.get(Number(req.params.id));
+    // Un socio solo puede consultar el detalle de sus propios préstamos (IDOR).
+    if (req.user!.role === 'member' && loan.user_id !== req.user!.id) {
+      throw errors.forbidden('Solo puedes consultar tus propios préstamos');
+    }
+    res.status(200).json({ ok: true, data: loan });
   },
 
   async create(req: Request, res: Response): Promise<void> {

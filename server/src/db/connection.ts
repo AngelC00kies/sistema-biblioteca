@@ -5,7 +5,6 @@ import { dirname } from 'node:path';
 import { SCHEMA } from './schema.js';
 
 let instance: SQLiteInstance | null = null;
-let currentPath = '';
 
 /**
  * Abre (o reabre) la conexión a la base de datos.
@@ -25,7 +24,6 @@ export function initDb(path: string): SQLiteInstance {
   db.exec(SCHEMA);
 
   instance = db;
-  currentPath = path;
   return db;
 }
 
@@ -37,10 +35,6 @@ export function getDb(): SQLiteInstance {
   return instance;
 }
 
-export function getCurrentPath(): string {
-  return currentPath;
-}
-
 export function closeDb(): void {
   if (instance) {
     try {
@@ -49,6 +43,5 @@ export function closeDb(): void {
       /* la base ya estaba cerrada */
     }
     instance = null;
-    currentPath = '';
   }
 }

@@ -195,3 +195,32 @@ describe('POST /api/loans/:id/return', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('GET /api/loans/:id', () => {
+  it('RB-PRE-14: un socio no puede leer el detalle de un préstamo ajeno', async () => {
+    const foreignLoan = insertLoanRow({
+      copyId: 6,
+      userId: 4,
+      dueDate: addDays(todayISO(), 14),
+    });
+
+    const denied = await request(app)
+      .get(`/api/loans/${foreignLoan}`)
+      .set('Authorization', await asMember());
+
+    expect(denied.status).toBe(403);
+
+    const own = await request(app)
+      .get('/api/loans')
+      .query({ status: 'active' })
+      .set('Authorization', await asLibrarian());
+    const mine = own.body.data.find((l: { user_id: number }) => l.user_id === 3);
+
+    const allowed = await request(app)
+      .get(`/api/loans/${mine.id}`)
+      .set('Authorization', await asMember());
+
+    expect(allowed.status).toBe(200);
+    expect(allowed.body.data.user_id).toBe(3);
+  });
+});

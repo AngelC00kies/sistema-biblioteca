@@ -117,7 +117,7 @@ La institución **necesita** informatizar su operación porque:
 |---|---|---|
 | OE-01 | **Modelar la base de datos** del dominio con las 8 entidades (users, categories, books, copies, loans, reservations, fines, audit_logs) en 3FN con integridad referencial. | Script DDL ejecutable y diagrama ER (doc. 06). |
 | OE-02 | **Implementar la capa de persistencia** (repositorios sobre better-sqlite3) con CRUD completo para todas las entidades. | Módulos `repositorios/` con pruebas unitarias. |
-| OE-03 | **Desarrollar la API REST** con Express + TypeScript siguiendo el flujo rutas → controladores → servicios → repositorios. | 34 endpoints publicados y documentados (doc. 05). |
+| OE-03 | **Desarrollar la API REST** con Express + TypeScript siguiendo el flujo rutas → controladores → servicios → repositorios. | 40 endpoints publicados y documentados (39 rutas de recursos + `GET /api/health`; doc. 05). |
 | OE-04 | **Implementar la autenticación con JWT** y el control de acceso por roles (RBAC admin/librarian/member). | Login, `/api/auth/me` y protección de rutas con pruebas. |
 | OE-05 | **Automatizar las reglas de negocio de préstamos** (ejemplar disponible, límite de 5 activos, bloqueo por deuda, plazo de 14 días). | Casos de prueba PB-xx en verde. |
 | OE-06 | **Automatizar el cálculo de multas** de 0,50/ día de atraso y su ciclo de vida (pending → paid). | Casos de prueba MB-xx en verde. |

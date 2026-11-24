@@ -37,7 +37,7 @@ biblioteca/
 │   │   ├── modules/           # auth · users · categories · books · copies
 │   │   │                      # loans · reservations · fines · reports · audit
 │   │   └── utils/             # Auditoría y utilidades de fecha
-│   ├── tests/                 # 94 pruebas (Vitest + supertest)
+│   ├── tests/                 # 96 pruebas (Vitest + supertest)
 │   └── scripts/smoke.mjs      # Prueba de humo de extremo a extremo
 │
 └── client/                    # SPA · React 18 + TypeScript + Vite
@@ -109,7 +109,7 @@ El servidor de desarrollo de Vite envía `/api` a `http://localhost:4000`
 ## 4. Pruebas
 
 ```bash
-# 94 pruebas automatizadas (8 archivos)
+# 96 pruebas automatizadas (8 archivos)
 cd server && npm test
 
 # Cobertura
@@ -126,7 +126,7 @@ cd client && npm run typecheck
 cd client && npm run build
 ```
 
-**Estado actual:** 8/8 archivos y 94/94 pruebas correctas; 16/16 pasos de humo correctos.
+**Estado actual:** 8/8 archivos y 96/96 pruebas correctas; 16/16 pasos de humo correctos.
 
 ---
 

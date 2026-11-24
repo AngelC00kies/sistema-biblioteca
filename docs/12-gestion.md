@@ -31,11 +31,11 @@ Se adopta un **Scrum simplificado (adaptado a un único desarrollador)**: se con
 
 | Semana | Sprint | Actividades principales | RF entregados | Artefactos de la semana |
 |---|---|---|---|---|
-| **S1** | Sprint 1 — Fundación | Levantamiento de requisitos con la biblioteca; definición de reglas de negocio; diseño de la BD (entidades, 3FN, DDL); inicialización del repositorio Git; estructura del monorepo (`client/`, `server/`, `docs/`); configuración de TypeScript, ESLint, Vitest. | — (base) | `01-problema.md`, `02-requisitos.md`, script DDL, esqueleto compilable |
-| **S2** | Sprint 2 — Núcleo del dominio | Capa de repositorios (CRUD 8 tablas); servicios de catálogo y usuarios; esquemas Zod; **autenticación JWT + bcrypt + RBAC**; middleware `authenticate/authorize/validate`; registro de auditoría. | RF-01…RF-15, RF-53…RF-55 | API de auth, usuarios y categorías operativas; pruebas IN-01…IN-06, FU-xx, FC-xx |
-| **S3** | Sprint 3 — Préstamos y multas | Servicio de préstamos con las 5 reglas de negocio; devolución con cálculo de atraso y multa; límite de 5 activos; bloqueo por deuda; transacciones; endpoints de préstamos y multas. | RF-23…RF-36, RF-44…RF-48 | Ciclo préstamo→devolución→multa completo; pruebas PB-xx, DV-xx, MB-xx; registro de ERR-01…ERR-04 |
-| **S4** | Sprint 4 — Reservas, catálogo completo y reportes | Servicio de reservas (disponibilidad, límite 3, caducidad 7 días, activación al devolver); CRUD de libros y ejemplares con búsqueda/paginación; reportes (summary, top-books, overdue). | RF-16…RF-22, RF-37…RF-43, RF-49…RF-52 | API completa (34 endpoints); pruebas RB-xx, FL-xx, FE-xx, RP-xx |
-| **S5** | Sprint 5 — Frontend completo | SPA React: login, dashboard con KPIs, catálogo, CRUD libros/ejemplares, registrar préstamo, devolución, listados con filtros, reservas, usuarios, multas, reportes, auditoría; guardas por rol; validación espejo. | RU-01…RU-12 (UI de todos los RF) | 11 pantallas navegables; `07-interfaces.md` final; pruebas FF-01…FF-08 |
+| **S1** | Sprint 1 — Fundación | Levantamiento de requisitos con la biblioteca; definición de reglas de negocio; diseño de la BD (entidades, 3FN, DDL); inicialización del repositorio Git; estructura del monorepo (`client/`, `server/`, `docs/`); configuración de TypeScript, Vitest y Vite. | — (base) | `01-problema.md`, `02-requisitos.md`, script DDL, esqueleto compilable |
+| **S2** | Sprint 2 — Núcleo del dominio | Capa de repositorios (CRUD 8 tablas); servicios de catálogo y usuarios; esquemas Zod; **autenticación JWT + bcrypt + RBAC**; middleware `authenticate/requireRole/validate`; registro de auditoría. | RF-01…RF-15, RF-53…RF-55 | API de auth, usuarios y categorías operativas; pruebas FC-AU-*, SE-AU-*, FC-USR-*, RB-USR-*, CAT-* |
+| **S3** | Sprint 3 — Préstamos y multas | Servicio de préstamos con las 5 reglas de negocio; devolución con cálculo de atraso y multa; límite de 5 activos; bloqueo por deuda; transacciones; endpoints de préstamos y multas. | RF-23…RF-36, RF-44…RF-48 | Ciclo préstamo→devolución→multa completo; pruebas FC-PRE-*, FC-DEV-*, MUL-*; registro de incidencias ERR-01…ERR-11 (doc. 10) |
+| **S4** | Sprint 4 — Reservas, catálogo completo y reportes | Servicio de reservas (disponibilidad, límite 3, caducidad 7 días, activación al devolver); CRUD de libros y ejemplares con búsqueda/paginación; reportes (summary, top-books, overdue). | RF-16…RF-22, RF-37…RF-43, RF-49…RF-52 | API completa (40 endpoints); pruebas FC-CAT-*, FC-EJ-*, FC-RES-*, FC-REP-* |
+| **S5** | Sprint 5 — Frontend completo | SPA React: login, dashboard con KPIs, catálogo, CRUD libros/ejemplares, registrar préstamo, devolución, listados con filtros, reservas, usuarios, multas, reportes, auditoría; guardas por rol; validación espejo. | RU-01…RU-12 (UI de todos los RF) | 11 rutas (9 páginas) navegables; `07-interfaces.md` final; pruebas FF-01…FF-08 |
 | **S6** | Sprint 6 — Calidad, seguridad y cierre | Suite completa de pruebas y corrección de errores; seguridad (helmet, rate limit, OWASP checklist); pruebas de rendimiento; copias de seguridad; redacción final de la documentación (03, 04, 05, 06, 08, 10, 11, 12); retrospectiva y entrega. | Cierre de RNF/RS/RD/RR | Documentación completa, `10-pruebas.md`, `11-calidad.md`, entrega final |
 
 **Hitos (milestones):**
@@ -45,8 +45,8 @@ Se adopta un **Scrum simplificado (adaptado a un único desarrollador)**: se con
 | H1 — Requisitos aprobados | Fin de S1 | Documentos 01 y 02 revisados, 55 RF priorizados |
 | H2 — API autenticada funcional | Fin de S2 | Login + RBAC + usuarios/categorías con pruebas en verde |
 | H3 — Ciclo de préstamo operativo | Fin de S3 | Prueba E2E API: préstamo → devolución → multa correcta |
-| H4 — API completa | Fin de S4 | 34 endpoints responden según contrato |
-| H5 — Sistema navegable | Fin de S5 | 11 pantallas con rol adecuado |
+| H4 — API completa | Fin de S4 | 40 endpoints responden según contrato |
+| H5 — Sistema navegable | Fin de S5 | 11 rutas con guardas por rol |
 | H6 — Entrega final | Fin de S6 | Documentación 01–12 + suite verde + checklist de calidad |
 
 ---
@@ -75,13 +75,13 @@ gantt
   Servicio de prestamos             :c1, 2026-12-07, 3d
   Devolucion y multas               :c2, after c1, 3d
   Transacciones y atomicidad        :c3, after c1, 2d
-  Pruebas PB/DV/MB                  :c4, after c2, 2d
+  Pruebas FC-PRE/FC-DEV/MUL       :c4, after c2, 2d
 
   section Reservas reportes
   Servicio de reservas              :d1, 2026-12-14, 2d
   Libros y ejemplares CRUD          :d2, 2026-12-14, 3d
   Reportes summary/top/overdue      :d3, after d1, 2d
-  Pruebas RB/FL/RP                  :d4, after d3, 2d
+  Pruebas FC-RES/FC-CAT/FC-REP      :d4, after d3, 2d
 
   section Frontend
   Login, layout y guardas           :e1, 2026-12-21, 2d
@@ -112,7 +112,7 @@ El hito final (`milestone` del 03/01/2027) marca la entrega del entregable compl
 |---|---|---|
 | Lenguajes | TypeScript 5 (strict) | Frontend y backend |
 | Backend | Node.js 22, Express 4 | API REST |
-| Validación | Zod | Esquemas compartidos |
+| Validación | Zod | Esquemas de validación en el servidor (`validateBody`/`validateQuery`) |
 | Seguridad | jsonwebtoken, bcryptjs, helmet, express-rate-limit, cors | Auth, hash, cabeceras, límite, CORS |
 | Base de datos | SQLite + better-sqlite3 | Persistencia, WAL, FK |
 | Frontend | React 18, Vite, react-router-dom | SPA |
@@ -122,8 +122,9 @@ El hito final (`milestone` del 03/01/2027) marca la entrega del entregable compl
 | Gestión de tareas | Tablero (GitHub Projects / tablas Markdown en `12-gestion.md`) | Sprint backlog y estado |
 | Planificación | Skill de planificación con archivos (`task_plan.md`, `progress.md`) | Seguimiento diario |
 | Documentación | Markdown + Mermaid | Los 12 documentos de `docs/` |
-| Análisis estático | `tsc --noEmit`, ESLint, `npm audit` | Calidad y seguridad |
+| Análisis estático | `npx tsc --noEmit` (server y client), `npm audit`, `npm test` | Calidad y seguridad |
 | Copias de seguridad | `sqlite3 .backup` / `VACUUM INTO` | Backup diario |
+| Comandos de ejecución | `npm install`; `npm run seed`, `npm run start` / `npm run dev`, `npm test`, `node scripts/smoke.mjs` (en `server/`); `npm run dev`, `npm run build` (en `client/`) — `npm run coverage` queda pendiente de instalar `@vitest/coverage-v8` | Instalación, datos de demostración, API, pruebas, humo y build |
 
 ---
 
@@ -154,14 +155,14 @@ Formato: `tipo(ambito): descripción en imperativo, sin punto final`.
 | Tipo | Uso | Ejemplo |
 |---|---|---|
 | `feat` | Nueva funcionalidad / RF | `feat(loans): registrar prestamo con plazo de 14 dias` |
-| `fix` | Corrección de error | `fix(multas): usar fecha local en el calculo de atraso (ERR-01)` |
-| `test` | Pruebas | `test(loans): casos PB-01 a PB-06 con supertest` |
+| `fix` | Corrección de error | `fix(db): comparar fechas con date() en el CHECK de devolucion (ERR-01)` |
+| `test` | Pruebas | `test(loans): casos FC-PRE-01 a FC-PRE-08 con supertest` |
 | `docs` | Documentación | `docs(requisitos): agregar RNF-15 y matriz de trazabilidad` |
-| `refactor` | Cambio sin alterar comportamiento | `refactor(repositories): consultas parametrizadas (ERR-04)` |
+| `refactor` | Cambio sin alterar comportamiento | `refactor(repositories): consultas parametrizadas` |
 | `chore` | Infraestructura/configuración | `chore(vite): habilitar build de produccion` |
-| `security` | Cambio de seguridad | `security(auth): rate limit de 10 intentos en login` |
+| `security` | Cambio de seguridad | `security(auth): rate limit de 20 intentos de login cada 15 minutos` |
 | `perf` | Rendimiento | `perf(books): indice compuesto para busqueda por titulo` |
-| `style` | Formato sin lógica | `style(eslint): corregir advertencias` |
+| `style` | Formato sin lógica | `style(client): ajustar espaciado del menú lateral` |
 
 **Alcance recomendado:** `auth`, `users`, `categories`, `books`, `copies`, `loans`, `reservations`, `fines`, `reports`, `audit`, `ui`, `db`, `pruebas`, `docs`, `config`.
 
@@ -172,8 +173,8 @@ chore(scaffold): inicializar monorepo client/server con TypeScript
 docs(requisitos): redactar RF-01 a RF-55 con verificacion
 feat(auth): login con JWT y bloqueo de usuarios inactivos
 feat(users): CRUD con RBAC exclusivo de administrador
-test(auth): casos IN-01 a IN-06 con supertest
-fix(auth): mensaje generico en credenciales invalidas (ERR-03)
+test(auth): casos FC-AU-01 a FC-AU-12 con supertest
+fix(auth): relajar el rate limit de login en NODE_ENV=test (ERR-03)
 ```
 
 ---
@@ -196,17 +197,17 @@ Detección → Registro (ERR-nn) → Clasificación (severidad) → Asignación 
 
 ### 6.2 Registro y tablero
 
-- Cada incidencia recibe ID `ERR-nn` y se registra en la tabla de `10-pruebas.md` §4 con descripción, severidad, caso de prueba, corrección y estado.
+- Cada incidencia recibe ID `ERR-nn` y se registra en la tabla de `10-pruebas.md` §5 con descripción, severidad, caso de prueba, corrección y estado.
 - El tablero de sprint tiene columnas: `Por hacer` → `En curso` → `En revisión` → `Hecho`.
 - **Regla:** ninguna incidencia se cierra sin una **prueba de regresión** asociada (nuevo caso o ampliación de uno existente).
-- Los errores ya detectados y corregidos en este proyecto (ERR-01…ERR-08) se detallan en el documento de pruebas; ninguno quedó abierto al cierre.
+- Los errores ya detectados y corregidos en este proyecto (ERR-01…ERR-11) se detallan en el documento de pruebas; ninguno quedó abierto al cierre.
 
 ### 6.3 Riesgos del proyecto y respuesta
 
 | ID | Riesgo | Prob. | Impacto | Respuesta |
 |---|---|---|---|---|
 | RS-P1 | Subestimar el esfuerzo del frontend | Alta | Alto | Priorizar pantallas críticas (login, catálogo, préstamo, devolución) en S5 temprano; resto como pulido |
-| RS-P2 | Errores de cálculo de fechas/multas | Media | Alto | Reloj inyectable + pruebas UN-01…UN-04 con casos límite (ERR-01) |
+| RS-P2 | Errores de cálculo de fechas/multas | Media | Alto | Comparación solo de fechas con `date()` + pruebas FC-PRE-04 y FC-DEV-11…FC-DEV-12 con casos límite (ERR-01) |
 | RS-P3 | Perder tiempo por errores de entorno (npm/build) | Media | Medio | Bloquear instalación en S1; lockfile; documentar comandos en README |
 | RS-P4 | Alcance desbordado (funciones extra) | Alta | Medio | Lista explícita de "fuera de alcance" (doc. 01 §8); toda adición negocia un RF |
 | RS-P5 | Caída del equipo local sin respaldo | Baja | Crítico | Git diario + backup semanal de la BD |
@@ -220,89 +221,89 @@ Detección → Registro (ERR-nn) → Clasificación (severidad) → Asignación 
 
 | RF | Descripción corta | Endpoint(s) | Módulo implementador | Prueba |
 |---|---|---|---|---|
-| RF-01 | Login con JWT | `POST /api/auth/login` | `AuthController`, `AuthService` | IN-01 |
-| RF-02 | Credenciales inválidas | `POST /api/auth/login` | `AuthService` | IN-02 |
-| RF-03 | Bloqueo de inactivos | `POST /api/auth/login` | `AuthService` | IN-04 |
-| RF-04 | Usuario del token | `GET /api/auth/me` | `AuthController` | IN-03 |
-| RF-05 | Auditoría de login | interno | `AuditService` | AU-01 |
-| RF-06 | Listar usuarios | `GET /api/users` | `UserController`, `UserService` | FU-01 |
-| RF-07 | Crear usuario | `POST /api/users` | `UserService` | FU-02 |
-| RF-08 | Username/email únicos | `POST /api/users` | `UserService` | FU-03 |
-| RF-09 | Editar usuario | `PUT /api/users/:id` | `UserService` | FU-05 |
-| RF-10 | Borrado lógico | `DELETE /api/users/:id` | `UserService` | FU-04 |
-| RF-11 | Registro solo admin | `POST /api/auth/register` | `AuthController` + `authorize('admin')` | FU-05 |
-| RF-12 | `member` sin acceso a usuarios | `/api/users/*` | `authorize('admin')` | SE-01 |
+| RF-01 | Login con JWT | `POST /api/auth/login` | `AuthController`, `AuthService` | FC-AU-01 |
+| RF-02 | Credenciales inválidas | `POST /api/auth/login` | `AuthService` | FC-AU-02, FC-AU-03 |
+| RF-03 | Bloqueo de inactivos | `POST /api/auth/login` | `AuthService` | FC-AU-04, FC-USR-08 |
+| RF-04 | Usuario del token | `GET /api/auth/me` | `AuthController` | FC-AU-08, SE-AU-06 |
+| RF-05 | Auditoría de login | interno (`audit()` en `src/utils/logger.ts`) | `AuditRepository` | AUD-13 |
+| RF-06 | Listar usuarios | `GET /api/users?role=&status=&search=` | `UserController`, `UserService` | FC-USR-04, RB-USR-16 |
+| RF-07 | Crear usuario | `POST /api/users` | `UserService` | FC-USR-05 |
+| RF-08 | Username/email únicos | `POST /api/users` y `POST /api/auth/register` | `UserService` | FC-USR-06, FC-AU-11 |
+| RF-09 | Editar usuario | `PUT /api/users/:id` | `UserService` | FC-USR-07, FC-USR-09 |
+| RF-10 | Borrado lógico | `DELETE /api/users/:id` | `UserService` | FC-USR-11, FC-USR-12 |
+| RF-11 | Registro solo admin | `POST /api/auth/register` | `AuthController` + `requireRole('admin')` | RB-AU-09, FC-AU-10 |
+| RF-12 | `member` sin acceso a usuarios | `/api/users/*` | `requireRole('admin')` | RB-USR-01, RB-USR-02 |
 
 ### 7.2 Catálogo
 
 | RF | Descripción corta | Endpoint(s) | Módulo implementador | Prueba |
 |---|---|---|---|---|
-| RF-13 | CRUD categorías | `GET/POST /api/categories`, `PUT/DELETE /api/categories/:id` | `CategoryService` | FC-01, FC-02 |
-| RF-14 | Baja bloqueada con libros | `DELETE /api/categories/:id` | `CategoryService` | FC-03 |
-| RF-15 | CRUD libros | `POST/PUT /api/books` | `BookService` | FL-01, FL-02 |
-| RF-16 | ISBN único | `POST /api/books` | `BookService` | FL-03 |
-| RF-17 | Búsqueda + filtro + paginación | `GET /api/books` | `BookRepository` | FL-04, FL-05 |
-| RF-18 | Contadores de ejemplares | `GET /api/books` | `BookRepository` (JOIN) | FL-06 |
-| RF-19 | Baja condicionada | `DELETE /api/books/:id` | `BookService` | FL-07 |
-| RF-20 | Alta de ejemplares | `POST /api/books/:id/copies` | `CopyService` | FE-01, FE-02 |
-| RF-21 | Estado de ejemplar | `PUT /api/copies/:id` | `CopyService` | FE-03 |
-| RF-22 | Ficha con ejemplares | `GET /api/books/:id/copies` | `CopyRepository` | FE-03 |
+| RF-13 | CRUD categorías | `GET/POST /api/categories`, `PUT/DELETE /api/categories/:id` | `CategoryService` | CAT-01, CAT-03, CAT-04, CAT-06, CAT-09, RB-CAT-07 |
+| RF-14 | Baja bloqueada con libros | `DELETE /api/categories/:id` | `CategoryService` | CAT-08 |
+| RF-15 | CRUD libros | `POST/PUT /api/books` | `BookService` | FC-CAT-06, FC-CAT-09, FC-CAT-10, FC-CAT-11 |
+| RF-16 | ISBN único | `POST /api/books` | `BookService` | FC-CAT-07 |
+| RF-17 | Búsqueda + filtro + paginación | `GET /api/books?search=&categoryId=&available=&page=&pageSize=` | `BookRepository` | FC-CAT-01, FC-CAT-02, FC-CAT-03 |
+| RF-18 | Contadores de ejemplares | `GET /api/books` | `BookRepository` (JOIN) | FC-CAT-01 |
+| RF-19 | Baja condicionada | `DELETE /api/books/:id` | `BookService` | — (sin caso automatizado; ver doc. 10 §7) |
+| RF-20 | Alta de ejemplares | `POST /api/books/:id/copies` | `CopyService` | FC-EJ-13, FC-EJ-14 |
+| RF-21 | Estado de ejemplar | `PUT /api/copies/:id` | `CopyService` | — (pendiente manual FF-04, doc. 10 §7) |
+| RF-22 | Ficha con ejemplares | `GET /api/books/:id/copies` | `CopyRepository` | FC-EJ-15 |
 
 ### 7.3 Préstamos y devoluciones
 
 | RF | Descripción corta | Endpoint(s) | Módulo implementador | Prueba |
 |---|---|---|---|---|
-| RF-23 | Préstamo con vencimiento +14 | `POST /api/loans` | `LoanService` | PB-01, UN-01 |
-| RF-24 | Solo ejemplares `available` | `POST /api/loans` | `LoanService` | PB-02 |
-| RF-25 | Usuario activo | `POST /api/loans` | `LoanService` | PB-03 |
-| RF-26 | Sin deuda pendiente | `POST /api/loans` | `LoanService` | PB-04 |
-| RF-27 | Límite de 5 activos | `POST /api/loans` | `LoanService` | PB-05, UN-06 |
-| RF-28 | Ejemplar → `loaned` + auditoría | `POST /api/loans` | `LoanService` (transacción) | PB-06 |
-| RF-29 | Devolución con fecha | `POST /api/loans/:id/return` | `LoanService` | DV-01 |
-| RF-30 | Ejemplar → `available` | `POST /api/loans/:id/return` | `LoanService` | DV-01 |
-| RF-31 | Multa 0,50/día | `POST /api/loans/:id/return` | `LoanService` + `FineService` | DV-02, UN-04 |
-| RF-32 | Reserva → `ready` | `POST /api/loans/:id/return` | `ReservationService` | DV-03 |
-| RF-33 | Listado con filtros | `GET /api/loans` | `LoanRepository` | PL-01 |
-| RF-34 | Mis préstamos | `GET /api/loans/my` | `LoanController` | PL-02 |
-| RF-35 | Marcaje `overdue` | `GET /api/loans` | `LoanService` | PL-03 |
-| RF-36 | Doble devolución bloqueada | `POST /api/loans/:id/return` | `LoanService` | DV-04 |
+| RF-23 | Préstamo con vencimiento +14 | `POST /api/loans` | `LoanService` | FC-PRE-01, FC-PRE-04 |
+| RF-24 | Solo ejemplares `available` | `POST /api/loans` | `LoanService` | FC-PRE-02 |
+| RF-25 | Usuario activo | `POST /api/loans` | `LoanService` | — (sin caso automatizado en préstamos) |
+| RF-26 | Sin deuda pendiente | `POST /api/loans` | `LoanService` | FC-PRE-05 |
+| RF-27 | Límite de 5 activos | `POST /api/loans` | `LoanService` | FC-PRE-06 |
+| RF-28 | Ejemplar → `loaned` + auditoría | `POST /api/loans` | `LoanService` (transacción) | FC-PRE-01, AUD-13 |
+| RF-29 | Devolución con fecha | `POST /api/loans/:id/return` | `LoanService` | FC-DEV-09 |
+| RF-30 | Ejemplar → `available` | `POST /api/loans/:id/return` | `LoanService` | FC-DEV-09 |
+| RF-31 | Multa 0,50/día | `POST /api/loans/:id/return` | `LoanService` + `FineService` | FC-DEV-11, FC-DEV-12 |
+| RF-32 | Reserva → `ready` | `POST /api/loans/:id/return` | `ReservationService` | FC-RES-12 |
+| RF-33 | Listado con filtros | `GET /api/loans?status=&search=&overdue=&memberId=` | `LoanRepository` | FC-PRE-08 |
+| RF-34 | Mis préstamos | `GET /api/loans/my` | `LoanController` | RB-PRE-07 |
+| RF-35 | Marcaje `overdue` | `GET /api/loans?status=overdue` | `LoanService` | — (sin caso del filtro overdue; lo reflejan FC-REP-07 y FC-REP-08) |
+| RF-36 | Doble devolución bloqueada | `POST /api/loans/:id/return` | `LoanService` | FC-DEV-10 |
 
 ### 7.4 Reservas, multas, reportes y auditoría
 
 | RF | Descripción corta | Endpoint(s) | Módulo implementador | Prueba |
 |---|---|---|---|---|
-| RF-37 | Reserva sin disponibilidad | `POST /api/reservations` | `ReservationService` | RB-01, RB-02 |
-| RF-38 | Límite 3 activas | `POST /api/reservations` | `ReservationService` | RB-03 |
-| RF-39 | Caducidad 7 días | `POST /api/reservations` | `ReservationService` | RB-01, UN-11 |
-| RF-40 | Listado de reservas | `GET /api/reservations` | `ReservationController` | RB-04 |
-| RF-41 | Cancelar reserva | `POST /api/reservations/:id/cancel` | `ReservationService` | RB-04, RB-05 |
-| RF-42 | Cumplir reserva | `POST /api/reservations/:id/fulfill` | `ReservationService` | RB-06 |
-| RF-43 | Caducidad diferida | `GET /api/reservations` | `ReservationService` | RB-07 |
-| RF-44 | Multas globales | `GET /api/fines` | `FineController` | MB-01 |
-| RF-45 | Mis multas | `GET /api/fines/my` | `FineController` | MB-02 |
-| RF-46 | Pago de multa | `POST /api/fines/:id/pay` | `FineService` | MB-03 |
-| RF-47 | Doble pago bloqueado | `POST /api/fines/:id/pay` | `FineService` | MB-04 |
-| RF-48 | Deuda bloquea préstamo | `POST /api/loans` | `LoanService` | MB-05 |
-| RF-49 | Resumen | `GET /api/reports/summary` | `ReportService` | RP-01 |
-| RF-50 | Top de libros | `GET /api/reports/top-books` | `ReportService` | RP-02 |
-| RF-51 | Atrasados | `GET /api/reports/overdue` | `ReportService` | RP-03 |
-| RF-52 | Reportes restringidos | `/api/reports/*` | `authorize('admin','librarian')` | SE-03 |
-| RF-53 | Auditoría de acciones | interno | `AuditService` | AU-01 |
-| RF-54 | Bitácora solo admin | `GET /api/audit` | `authorize('admin')` | AU-02 |
-| RF-55 | Bitácora append-only | sin endpoints de escritura | `AuditRepository` | AU-03 |
+| RF-37 | Reserva sin disponibilidad | `POST /api/reservations` | `ReservationService` | FC-RES-01, FC-RES-03 |
+| RF-38 | Límite 3 activas | `POST /api/reservations` | `ReservationService` | — (sin caso automatizado) |
+| RF-39 | Caducidad 7 días | `POST /api/reservations` (vence por `expires_at`) | `ReservationService` | — (sin caso automatizado) |
+| RF-40 | Listado de reservas | `GET /api/reservations?status=` y `GET /api/reservations/my` | `ReservationController` | FC-RES-06, RB-RES-07 |
+| RF-41 | Cancelar reserva | `POST /api/reservations/:id/cancel` | `ReservationService` | FC-RES-09, RB-RES-08, FC-RES-10 |
+| RF-42 | Cumplir reserva | `POST /api/reservations/:id/fulfill` | `ReservationService` | RB-RES-11 (solo la denegación) |
+| RF-43 | Caducidad diferida | `GET /api/reservations` (renovación al listar) | `ReservationService` | — (sin caso automatizado) |
+| RF-44 | Multas globales | `GET /api/fines?status=` | `FineController` | MUL-04, RB-MUL-03 |
+| RF-45 | Mis multas | `GET /api/fines/my` | `FineController` | MUL-02, FC-DEV-12 |
+| RF-46 | Pago de multa | `POST /api/fines/:id/pay` | `FineService` | MUL-05, MUL-08, MUL-09, RB-MUL-07 |
+| RF-47 | Doble pago bloqueado | `POST /api/fines/:id/pay` | `FineService` | MUL-06 |
+| RF-48 | Deuda bloquea préstamo | `POST /api/loans` | `LoanService` | FC-PRE-05 |
+| RF-49 | Resumen | `GET /api/reports/summary` | `ReportService` | FC-REP-04, FC-REP-08 |
+| RF-50 | Top de libros | `GET /api/reports/top-books?limit=` | `ReportService` | FC-REP-06 |
+| RF-51 | Atrasados | `GET /api/reports/overdue` | `ReportService` | FC-REP-07 |
+| RF-52 | Reportes restringidos | `GET /api/reports/summary, top-books, overdue` | `requireRole(...STAFF_ROLES)` | RB-REP-02, SE-REP-03, FC-REP-05 |
+| RF-53 | Auditoría de acciones | interno (`audit()` en `src/utils/logger.ts`) | `AuditRepository` | AUD-13 |
+| RF-54 | Bitácora solo admin | `GET /api/audit?action=&entity=&limit=` | `requireRole('admin')` | AUD-14 |
+| RF-55 | Bitácora append-only | sin endpoints de escritura | `AuditRepository` | — (sin caso automatizado) |
 
 ### 7.5 Requisitos no funcionales → evidencia
 
 | Rango | Dónde se implementa | Dónde se verifica |
 |---|---|---|
-| RNF-01…RNF-06, RNF-15 | índices, paginación, bcrypt 12, WAL | Pruebas RR-01…RR-05 (doc. 10) |
-| RNF-07, RNF-08 | DDL con FK/CHECK, transacciones | BD-01…BD-04 |
+| RNF-01…RNF-06, RNF-15 | índices, paginación, bcrypt 12, WAL | Pruebas RR-01…RR-05 (doc. 10 §7) |
+| RNF-07, RNF-08 | DDL con FK/CHECK (`src/db/schema.ts`), transacciones en los servicios | Revisión del DDL (docs. 04 y 06) y de las transacciones de `loans`/`reservations` |
 | RNF-09 | SQLite local, sin dependencias externas | Revisión de arquitectura (doc. 05) |
-| RNF-10, RNF-11 | Vitest + `tsc --noEmit` | Reportes de cobertura y typecheck |
+| RNF-10, RNF-11 | Vitest + `tsc --noEmit` | `npm test` y `npx tsc -p tsconfig.json --noEmit` (doc. 10 §4 y §6); `npm run coverage` queda pendiente de instalar `@vitest/coverage-v8` |
 | RNF-12 | Documentación `docs/` 01–12 | Este entregable |
-| RNF-13, RNF-14 | Vite build, CSS responsive | FF-01…FF-08 y revisión visual |
-| RS-01…RS-12 | middlewares, bcrypt, Zod, helmet, rate limit | Casos SE-01…SE-10 (doc. 10) |
-| RD-01…RD-07 | WAL, backups, `errorHandler` | Doc. 08 §10 y checklist |
-| RU-01…RU-12 | UI React, mensajes, confirmaciones | Casos FF-01…FF-08 |
+| RNF-13, RNF-14 | Vite build, CSS responsive | Casos FF-01…FF-08 (doc. 10 §7) y revisión visual |
+| RS-01…RS-12 | middlewares, bcrypt, Zod, helmet, rate limit | Casos `SE-*` y `RB-*` de `server/tests` (doc. 10 §3) |
+| RD-01…RD-07 | WAL, backups, `errorHandler` | Doc. 08 §10 y checklist; copia/restauración BK-01 (doc. 10 §7) |
+| RU-01…RU-12 | UI React, mensajes, confirmaciones | Casos FF-01…FF-08 (doc. 10 §7) |
 
-**Cobertura de la trazabilidad:** 55/55 RF con endpoint, módulo y caso de prueba asignados → **100 %**.
+**Cobertura de la trazabilidad:** 55/55 RF con endpoint y módulo implementador asignados → **100 %**; 47/55 con caso automatizado en `server/tests` y 8 sin caso automatizado (marcados "—": RF-19, RF-21, RF-25, RF-35, RF-38, RF-39, RF-43 y RF-55, ver doc. 10 §7).

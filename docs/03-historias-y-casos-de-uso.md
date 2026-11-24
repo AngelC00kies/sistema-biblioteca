@@ -55,8 +55,8 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 | # | Escenario | Given | When | Then |
 |---|---|---|---|---|
 | 1 | Acceso correcto | Estoy en la pantalla de inicio de sesión con credenciales válidas de un usuario `active` | Presiono **Ingresar** | Recibo un token JWT, se redirige al dashboard según mi rol y aparece mi nombre en la barra superior |
-| 2 | Contraseña incorrecta | La pantalla de inicio de sesión está abierta | Envío una contraseña incorrecta | Se muestra "Credenciales inválidas" junto al campo, sin indicar si el usuario existe, y permanezco en el login |
-| 3 | Usuario inactivo | Existe un usuario con `status='inactive'` | Intento iniciar sesión con ese usuario | Se muestra "Usuario inactivo, contacte al administrador" y **no** se emite token |
+| 2 | Contraseña incorrecta | La pantalla de inicio de sesión está abierta | Envío una contraseña incorrecta | Se muestra "Usuario o contraseña incorrectos" junto al campo, sin indicar si el usuario existe, y permanezco en el login |
+| 3 | Usuario inactivo | Existe un usuario con `status='inactive'` | Intento iniciar sesión con ese usuario | Se muestra "La cuenta está inactiva. Contacta al administrador" y **no** se emite token |
 | 4 | Campos vacíos | Estoy en el login | Envío el formulario vacío | Se resaltan los campos requeridos y no se realiza petición al servidor |
 
 ---
@@ -86,7 +86,7 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 |---|---|---|---|---|
 | 1 | Préstamo exitoso | Un ejemplar está `available` y el usuario está `active`, sin deudas ni 5 préstamos activos | Selecciono el ejemplar y el usuario y presiono **Registrar préstamo** | Se crea el préstamo con `loan_date` de hoy, `due_date` = hoy + 14 días, el ejemplar pasa a `loaned`, se registra auditoría y se muestra la fecha de vencimiento |
 | 2 | Ejemplar ya prestado | El ejemplar tiene estado `loaned` | Confirmo el préstamo | Aparece el error "El ejemplar no está disponible" y no se crea el registro |
-| 3 | Usuario con multa pendiente | El usuario tiene una multa `pending` | Confirmo el préstamo | Aparece "El usuario tiene una multa pendiente de $X" y el préstamo se bloquea |
+| 3 | Usuario con multa pendiente | El usuario tiene una multa `pending` | Confirmo el préstamo | Aparece "El socio tiene multas pendientes y no puede retirar material nuevo" y el préstamo se bloquea |
 | 4 | Límite alcanzado | El usuario ya tiene 5 préstamos `active` | Confirmo el préstamo | Aparece "Límite de 5 préstamos activos alcanzado" |
 | 5 | Usuario inactivo | El usuario tiene `status='inactive'` | Confirmo el préstamo | Se bloquea con mensaje específico |
 
@@ -103,7 +103,7 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 | 1 | Devolución en tiempo | El préstamo está `active` y `due_date` es hoy o futuro | Presiono **Registrar devolución** | El ejemplar pasa a `available`, `return_date` se fija, el préstamo pasa a `returned` y **no** se genera multa |
 | 2 | Devolución tardía | El préstamo está `active` y `due_date` fue hace 3 días | Presiono **Registrar devolución** | Se genera una multa de 3 × 0,50 = **1,50** con `status='pending'` y se muestra el importe |
 | 3 | Con reserva pendiente | El libro tiene una reserva `pending` | Se registra la devolución | La reserva más antigua pasa a `ready` y aparece en la lista de reservas |
-| 4 | Préstamo ya devuelto | El préstamo tiene `return_date` | Intento devolverlo de nuevo | Error 409 "El préstamo ya fue devuelto" |
+| 4 | Préstamo ya devuelto | El préstamo tiene `return_date` | Intento devolverlo de nuevo | Error 422 `BUSINESS_RULE_VIOLATION` "Este préstamo ya fue devuelto" |
 
 ---
 
@@ -131,7 +131,7 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 | # | Escenario | Given | When | Then |
 |---|---|---|---|---|
 | 1 | Pago exitoso | Tengo una multa `pending` de 2,50 | Presiono **Pagar** y confirmo | La multa pasa a `paid`, se fija `paid_at`, se registra auditoría `FINE_PAID` y desaparece de mi lista de pendientes |
-| 2 | Multa ya pagada | La multa está en `paid` | Intento pagarla de nuevo | Error 409 "La multa ya fue pagada" |
+| 2 | Multa ya pagada | La multa está en `paid` | Intento pagarla de nuevo | Error 422 `BUSINESS_RULE_VIOLATION` "La multa ya fue pagada" |
 | 3 | Sin multas | No tengo multas | Abro la pantalla de multas | Se muestra "No tienes multas pendientes" |
 
 ---
@@ -147,7 +147,7 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 | 1 | Alta de usuario | Soy `admin` y estoy en "Gestionar usuarios" | Completo el formulario (username, email, nombre completo, rol, contraseña) y envío | Se crea el usuario `active`, se hashea la contraseña con bcrypt (12 rondas) y aparece en la lista |
 | 2 | Datos duplicados | Ya existe un usuario con ese username | Envío el formulario | Error "El nombre de usuario ya existe" sin crear el registro |
 | 3 | Desactivar | Soy `admin` y selecciono un usuario | Confirmo la desactivación | El usuario pasa a `inactive`, **no** puede iniciar sesión y su histórico se conserva |
-| 4 | Sin permiso | Soy `librarian` | Intento acceder a `/api/users` | Respuesta 403 "No autorizado" |
+| 4 | Sin permiso | Soy `librarian` | Intento acceder al padrón completo (`GET /api/users` sin filtro) | Respuesta 403 `FORBIDDEN` "No tienes permisos para realizar esta acción" (con `role=member&status=active` sí puede listar socios, para registrar préstamos — ERR-11) |
 
 ---
 
@@ -174,8 +174,8 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 | # | Escenario | Given | When | Then |
 |---|---|---|---|---|
 | 1 | Resumen | Soy `admin` o `librarian` | Abro "Reportes → Resumen" | Veo usuarios, libros, ejemplares, préstamos activos, atrasados, multas pendientes y monto por cobrar |
-| 2 | Top de libros | Hay histórico de préstamos | Selecciono un rango de fechas y presiono **Generar** | Se muestra el ranking de títulos con su conteo de préstamos en orden descendente |
-| 3 | Atrasados | Hay préstamos vencidos | Abro "Préstamos atrasados" | La tabla lista usuario, libro, ejemplar, días de atraso y multa estimada |
+| 2 | Top de libros | Hay histórico de préstamos | Elijo cuántos títulos mostrar (máx. 50) y presiono **Generar** | Se muestra el ranking de títulos con su conteo de préstamos en orden descendente |
+| 3 | Atrasados | Hay préstamos vencidos | Abro "Préstamos atrasados" | La tabla lista usuario, libro, ejemplar y días de atraso (la multa devenga $0,50/día) |
 | 4 | Sin permiso | Soy `member` | Intento acceder a reportes | 403 y redirigido a "Consulta de catálogo" |
 
 ---
@@ -228,8 +228,8 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 |---|---|
 | **Actores** | Administrador, Bibliotecario, Miembro (principal); Servicio de autenticación (secundario) |
 | **Precondiciones** | 1. El usuario existe en `users`. 2. El navegador tiene acceso al servidor API. 3. No existe una sesión activa vigente. |
-| **Flujo principal** | 1. El actor abre la pantalla de inicio de sesión.<br>2. Ingresa `username` y `password`.<br>3. El sistema valida el esquema con Zod.<br>4. El servicio busca el usuario por `username`.<br>5. Verifica el hash con bcrypt (12 rondas).<br>6. Verifica que `status='active'`.<br>7. Emite un JWT (expiración 8 h) con `id`, `username`, `role`.<br>8. Registra `LOGIN_SUCCESS` en `audit_logs`.<br>9. El frontend guarda el token, consulta `GET /api/auth/me` y redirige según rol: `admin`→dashboard, `librarian`→dashboard, `member`→catálogo. |
-| **Flujos alternativos** | **3a.** Campos inválidos → devuelve 400 con los mensajes de Zod y no consulta la BD.<br>**4a.** Usuario inexistente o contraseña incorrecta → 401 "Credenciales inválidas" (mensaje genérico, se registra `LOGIN_FAILED`).<br>**6a.** Usuario `inactive` → 403 "Usuario inactivo".<br>**7a.** Demasiados intentos → 429 por *rate limiting* (10 intentos / 15 min). |
+| **Flujo principal** | 1. El actor abre la pantalla de inicio de sesión.<br>2. Ingresa `username` y `password`.<br>3. El sistema valida el esquema con Zod.<br>4. El servicio busca el usuario por `username`.<br>5. Verifica el hash con bcrypt (12 rondas).<br>6. Verifica que `status='active'`.<br>7. Emite un JWT (expiración 8 h) con los claims `sub`, `username`, `role`.<br>8. Registra `LOGIN_SUCCESS` en `audit_logs`.<br>9. El frontend guarda el token, consulta `GET /api/auth/me` y redirige según rol: `admin`→dashboard, `librarian`→dashboard, `member`→catálogo. |
+| **Flujos alternativos** | **3a.** Campos inválidos → devuelve 400 con los mensajes de Zod y no consulta la BD.<br>**4a.** Usuario inexistente o contraseña incorrecta → 401 `UNAUTHORIZED` "Usuario o contraseña incorrectos" (mensaje genérico, se registra `LOGIN_FAILED`).<br>**6a.** Usuario `inactive` → 403 `FORBIDDEN` "La cuenta está inactiva. Contacta al administrador".<br>**7a.** Demasiados intentos → 429 `RATE_LIMITED` por *rate limiting* (20 intentos / 15 min por IP). |
 | **Postcondiciones** | **Éxito:** existe una sesión JWT válida y una fila en `audit_logs`.<br>Fracaso: ninguna sesión creada; los intentos quedan registrados. |
 | **Excepciones** | Caída del servidor → pantalla de error controlada con reintento. |
 
@@ -242,7 +242,7 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 | **Actores** | Administrador |
 | **Precondiciones** | 1. El actor está autenticado con rol `admin`. 2. El token no ha expirado. |
 | **Flujo principal** | 1. Abre "Gestionar usuarios → Nuevo".<br>2. Completa `username`, `email`, `full_name`, `role`, `password`, `status`.<br>3. El sistema valida con Zod.<br>4. Verifica unicidad de `username` y `email`.<br>5. Hashea la contraseña (bcrypt 12).<br>6. Inserta el registro con `created_at` actual.<br>7. Registra `USER_CREATED` en auditoría.<br>8. Muestra el usuario en la tabla. |
-| **Flujos alternativos** | **3a.** Datos inválidos → 400 con detalle por campo.<br>**4a.** Username/email duplicado → 409 "ya existe".<br>**2a.** Contraseña < 8 caracteres → validación en cliente y servidor. |
+| **Flujos alternativos** | **3a.** Datos inválidos → 400 `BAD_REQUEST` con detalle por campo (`details: [{campo, mensaje}]`).<br>**4a.** Username/email duplicado → 409 `CONFLICT` "ya existe".<br>**2a.** Contraseña < 8 caracteres → validación en cliente y servidor. |
 | **Postcondiciones** | El usuario existe con `status` inicial y contraseña hasheada; no queda ningún dato en texto plano. |
 | **Excepciones** | Error de BD → 500 manejado sin exponer SQL. |
 
@@ -255,7 +255,7 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 | **Actores** | Bibliotecario, Administrador |
 | **Precondiciones** | Sesión autenticada con rol `admin` o `librarian`. |
 | **Flujo principal** | 1. Abre "Categorías".<br>2. Visualiza `GET /api/categories`.<br>3. Crea una categoría (`name` único, `description` opcional) o edita/elimina una existente.<br>4. El servidor valida y persiste.<br>5. Auditoría `CATEGORY_CREATED/UPDATED/DELETED`. |
-| **Flujos alternativos** | **3a.** Nombre duplicado → 409.<br>**3b.** Eliminar categoría con libros asociados → 409 con el conteo de libros.<br>**4a.** Rol `member` → 403. |
+| **Flujos alternativos** | **3a.** Nombre duplicado → 409 `CONFLICT`.<br>**3b.** Eliminar categoría con libros asociados → 422 `BUSINESS_RULE_VIOLATION` "No se puede eliminar: existen libros asociados".<br>**4a.** Rol `member` → 403 `FORBIDDEN`.<br>**4b.** Eliminar con rol `librarian` → 403 (la baja de categoría es exclusiva de `admin`). |
 | **Postcondiciones** | El catálogo de categorías refleja el cambio y las FK siguen intactas. |
 
 ---
@@ -266,8 +266,8 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 |---|---|
 | **Actores** | Bibliotecario, Administrador |
 | **Precondiciones** | Sesión con rol adecuado; para crear/editar, la categoría debe existir. |
-| **Flujo principal** | 1. Abre "Libros".<br>2. Ejecuta `GET /api/books` con `q`, `category_id`, `page`, `limit`.<br>3. Da de alta un libro con ISBN, título, autor, editorial, año, categoría y descripción.<br>4. Valida Zod + unicidad de ISBN.<br>5. Persiste y registra auditoría.<br>6. (Opcional) Agrega ejemplares desde la ficha. |
-| **Flujos alternativos** | **3a.** ISBN duplicado → 409.<br>**4a.** Año fuera de rango (1400…año actual) → 400.<br>**3b.** Eliminar libro con préstamos asociados → 409. |
+| **Flujo principal** | 1. Abre "Libros".<br>2. Ejecuta `GET /api/books` con `search`, `categoryId`, `available`, `page`, `pageSize`.<br>3. Da de alta un libro con ISBN, título, autor, editorial, año, categoría y descripción.<br>4. Valida Zod + unicidad de ISBN.<br>5. Persiste y registra auditoría `BOOK_CREATED`.<br>6. (Opcional) Agrega ejemplares desde la ficha. |
+| **Flujos alternativos** | **3a.** ISBN duplicado → 409 `CONFLICT`.<br>**4a.** Año fuera de rango (1400…año actual + 1) → 400 `BAD_REQUEST`.<br>**3b.** Eliminar libro con ejemplares en préstamo → 422 `BUSINESS_RULE_VIOLATION` "No se puede eliminar: el libro tiene ejemplares prestados actualmente".<br>**4b.** Eliminar con rol `librarian` → 403 (la baja de libros es exclusiva de `admin`). |
 | **Postcondiciones** | El libro es consultable en el catálogo con sus contadores de ejemplares. |
 
 ---
@@ -278,8 +278,8 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 |---|---|
 | **Actores** | Bibliotecario, Administrador |
 | **Precondiciones** | El libro destino existe. El `inventory_code` es único. |
-| **Flujo principal** | 1. Abre la ficha del libro.<br>2. Registra un ejemplar con código de inventario y condición (`new`, `good`, `worn`…).<br>3. Estado inicial `available`.<br>4. Modifica estado/condición vía `PUT /api/copies/:id`.<br>5. Auditoría `COPY_CREATED/COPY_UPDATED`. |
-| **Flujos alternativos** | **2a.** Código duplicado → 409.<br>**4a.** Intentar marcar `available` un ejemplar `loaned` con préstamo activo → 409 (debe devolverse primero). |
+| **Flujo principal** | 1. Abre la ficha del libro.<br>2. Registra un ejemplar con código de inventario y condición (`good`, `regular`, `damaged`).<br>3. Estado inicial `available`.<br>4. Modifica estado/condición vía `PUT /api/copies/:id`.<br>5. Auditoría `COPY_CREATED/COPY_UPDATED`. |
+| **Flujos alternativos** | **2a.** Código duplicado → 409 `CONFLICT`.<br>**4a.** Intentar marcar `available` un ejemplar `loaned` con préstamo activo → 422 `BUSINESS_RULE_VIOLATION` (debe devolverse primero). |
 | **Postcondiciones** | El ejemplar está registrado y su estado determina si es prestable. |
 
 ---
@@ -303,7 +303,7 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 | **Actores** | Bibliotecario, Administrador |
 | **Precondiciones** | 1. Sesión autenticada con rol adecuado. 2. El ejemplar existe y está `available`. 3. El usuario está `active`. 4. El usuario no tiene multas `pending`. 5. El usuario tiene menos de 5 préstamos `active`. |
 | **Flujo principal** | 1. Abre "Registrar préstamo".<br>2. Busca y selecciona el usuario.<br>3. Busca y selecciona el ejemplar (solo disponibles).<br>4. El sistema muestra `loan_date` (hoy) y `due_date` calculado (hoy + 14 días).<br>5. Confirma.<br>6. El servicio crea el préstamo `active`, cambia el ejemplar a `loaned` y escribe auditoría `LOAN_CREATED` en una misma transacción.<br>7. Muestra el comprobante con la fecha de vencimiento. |
-| **Flujos alternativos** | **4a.** Ejemplar no disponible → 409.<br>**4b.** Usuario inactivo → 403/409.<br>**4c.** Deuda pendiente → 409 con el monto.<br>**4d.** 5 préstamos activos → 409.<br>**6a.** Fallo en la BD → rollback y mensaje 500 (el ejemplar no queda `loaned` sin préstamo). |
+| **Flujos alternativos** | **4a.** Ejemplar no disponible → 422 `BUSINESS_RULE_VIOLATION` (indica el estado actual).<br>**4b.** Usuario inactivo → 422 `BUSINESS_RULE_VIOLATION` "El socio está inactivo".<br>**4c.** Deuda pendiente → 422 `BUSINESS_RULE_VIOLATION` "El socio tiene multas pendientes".<br>**4d.** 5 préstamos activos → 422 `BUSINESS_RULE_VIOLATION` (límite alcanzado).<br>**4e.** Fecha de vencimiento no futura → 400 `BAD_REQUEST`.<br>**6a.** Fallo en la BD → rollback y mensaje 500 (el ejemplar no queda `loaned` sin préstamo). |
 | **Postcondiciones** | Existe un préstamo `active`, el ejemplar está `loaned` y hay una fila de auditoría. |
 
 ---
@@ -314,8 +314,8 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 |---|---|
 | **Actores** | Bibliotecario, Administrador |
 | **Precondiciones** | El préstamo existe, está `active` y sin `return_date`. |
-| **Flujo principal** | 1. Localiza el préstamo (por usuario, ejemplar o ISBN).<br>2. Presiona **Registrar devolución**.<br>3. El sistema fija `return_date`.<br>4. Compara `return_date` con `due_date`.<br>5. Si hay atraso: `días × 0,50` → inserta `fines` (`pending`) y suma `fine_amount` al préstamo.<br>6. El ejemplar pasa a `available`.<br>7. Si hay reserva `pending` del libro → pasa a `ready`; se cancelan reservas vencidas.<br>8. Auditoría `LOAN_RETURNED` y `FINE_CREATED`.<br>9. Muestra el resumen (atraso, multa). |
-| **Flujos alternativos** | **4a.** Devolución puntual → sin multa.<br>**3a.** Préstamo ya devuelto → 409.<br>**6a.** El ejemplar llega dañado → se registra primero en `maintenance`/`lost` y luego se cierra el préstamo. |
+| **Flujo principal** | 1. Localiza el préstamo (por usuario, ejemplar o ISBN).<br>2. Presiona **Registrar devolución**.<br>3. El sistema fija `return_date`.<br>4. Compara `return_date` con `due_date` (días de gracia: 0).<br>5. Si hay atraso: `días × 0,50` → inserta `fines` (`pending`) y guarda `fine_amount` en el préstamo.<br>6. El ejemplar pasa a `available` (salvo que esté marcado `lost`/`maintenance`).<br>7. Si hay reserva `pending` del libro → la más antigua pasa a `ready` con nueva caducidad.<br>8. Auditoría `LOAN_RETURNED` (la multa se refleja en la tabla `fines`; no genera evento propio).<br>9. Muestra el resumen (atraso, multa). |
+| **Flujos alternativos** | **4a.** Devolución puntual → sin multa.<br>**3a.** Préstamo ya devuelto → 422 `BUSINESS_RULE_VIOLATION` "Este préstamo ya fue devuelto".<br>**6a.** El ejemplar fue marcado `lost`/`maintenance` antes de la devolución → el préstamo se cierra pero el ejemplar **no** vuelve a `available` (se gestiona por `PUT /api/copies/:id`). |
 | **Postcondiciones** | El préstamo está `returned`, el ejemplar disponible (o fuera de circulación), la multa registrada si corresponde y la reserva notificada. |
 
 ---
@@ -325,9 +325,9 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 | Campo | Contenido |
 |---|---|
 | **Actores** | Miembro |
-| **Precondiciones** | Sesión `member` activa; el libro existe; todos sus ejemplares están `loaned` (o no hay ejemplares); el usuario tiene < 3 reservas activas; no debe tener deuda (regla de coherencia). |
-| **Flujo principal** | 1. Abre la ficha de un libro sin disponibilidad.<br>2. Presiona **Reservar**.<br>3. El sistema verifica la disponibilidad y el límite de 3.<br>4. Crea la reserva `pending` con `expires_at = hoy + 7 días`.<br>5. Auditoría `RESERVATION_CREATED`. |
-| **Flujos alternativos** | **3a.** Hay ejemplares disponibles → 409 con mensaje orientador.<br>**3b.** Límite alcanzado → 409.<br>**4a.** Caducidad → el CU-16 marca `cancelled` al vencer. |
+| **Precondiciones** | Sesión `member` activa; el libro existe y tiene ejemplares; todos sus ejemplares están `loaned` (o no hay ejemplares disponibles); el usuario tiene < 3 reservas activas. |
+| **Flujo principal** | 1. Abre la ficha de un libro sin disponibilidad.<br>2. Presiona **Reservar**.<br>3. El sistema verifica la disponibilidad, la ausencia de reserva activa previa y el límite de 3.<br>4. Crea la reserva `pending` con `expires_at = hoy + 7 días`.<br>5. Auditoría `RESERVATION_CREATED`. |
+| **Flujos alternativos** | **3a.** Hay ejemplares disponibles → 422 `BUSINESS_RULE_VIOLATION` con mensaje orientador ("realiza un préstamo directo").<br>**3b.** Límite de 3 alcanzado → 422 `BUSINESS_RULE_VIOLATION`.<br>**3c.** Ya existe reserva activa del mismo socio para ese libro → 409 `CONFLICT`.<br>**4a.** Caducidad → `GET /api/reservations` cancela (`expireStale`) las reservas vencidas al consultarse. |
 | **Postcondiciones** | Existe una reserva vigente que será atendida por orden de llegada al devolverse el libro. |
 
 ---
@@ -339,7 +339,7 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 | **Actores** | Miembro (solo las propias), Bibliotecario, Administrador |
 | **Precondiciones** | La reserva existe y está `pending` o `ready`. |
 | **Flujo principal** | 1. Selecciona la reserva.<br>2. Presiona **Cancelar** y confirma.<br>3. `status='cancelled'`.<br>4. Auditoría `RESERVATION_CANCELLED`. |
-| **Flujos alternativos** | **1a.** Reserva de otro miembro con rol `member` → 403 (control IDOR).<br>**2a.** Reserva `fulfilled` → 409. |
+| **Flujos alternativos** | **1a.** Reserva de otro miembro con rol `member` → 403 `FORBIDDEN` "Solo puedes cancelar tus propias reservas" (control IDOR).<br>**2a.** Reserva `fulfilled` o `cancelled` → 422 `BUSINESS_RULE_VIOLATION` "La reserva ya está cerrada y no admite cambios". |
 | **Postcondiciones** | El cupo de reserva del usuario queda liberado. |
 
 ---
@@ -349,9 +349,9 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 | Campo | Contenido |
 |---|---|
 | **Actores** | Bibliotecario, Administrador |
-| **Precondiciones** | La reserva está `ready` (o `pending` y el libro tiene ejemplares disponibles). |
+| **Precondiciones** | La reserva está en estado `ready` (pasa a `ready` cuando el libro se devuelve). Solo personal (`admin`/`librarian`). |
 | **Flujo principal** | 1. Consulta la lista de reservas `ready`.<br>2. Al entregar el libro presiona **Cumplir**.<br>3. La reserva pasa a `fulfilled` con fecha actual.<br>4. Auditoría `RESERVATION_FULFILLED`. |
-| **Flujos alternativos** | **2a.** Ya fue cancelada → 409.<br>**3a.** La reserva venció → se marca `cancelled` y se informa. |
+| **Flujos alternativos** | **2a.** La reserva no está `ready` (pendiente, cancelada o atendida) → 422 `BUSINESS_RULE_VIOLATION` "La reserva aún no está lista para entrega".<br>**2b.** Rol `member` → 403 `FORBIDDEN`.<br>**3a.** La reserva `ready` venció → al consultarse se marca `cancelled` (`expireStale`) y no puede cumplirse. |
 | **Postcondiciones** | El usuario recibió el libro y la reserva queda cerrada. |
 
 ---
@@ -363,7 +363,7 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 | **Actores** | Miembro (las propias), Bibliotecario/Administrador (todas) |
 | **Precondiciones** | Sesión autenticada. Para pagar, la multa está `pending`. |
 | **Flujo principal** | 1. Abre "Mis multas" (`GET /api/fines/my`) o "Multas" (globales).<br>2. Identifica el importe y el motivo.<br>3. Presiona **Pagar** y confirma.<br>4. `status='paid'`, `paid_at` = ahora.<br>5. Auditoría `FINE_PAID`. |
-| **Flujos alternativos** | **2a.** Multa ya pagada → 409.<br>**3a.** El rol no corresponde → 403.<br>**4a.** Tras pagar, el usuario vuelve a ser elegible para préstamos. |
+| **Flujos alternativos** | **2a.** Multa ya pagada → 422 `BUSINESS_RULE_VIOLATION` "La multa ya fue pagada".<br>**3a.** Consulta global (`GET /api/fines`) con rol `member` → 403 `FORBIDDEN`.<br>**3b.** Pago de la multa de otro socio con rol `member` → 403 `FORBIDDEN` "Solo puedes pagar tus propias multas".<br>**4a.** Tras pagar, el usuario vuelve a ser elegible para préstamos. |
 | **Postcondiciones** | La deuda queda saldada y se habilita nuevamente el préstamo de libros. |
 
 ---
@@ -374,8 +374,8 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 |---|---|
 | **Actores** | Bibliotecario, Administrador |
 | **Precondiciones** | Sesión con rol `admin` o `librarian`. |
-| **Flujo principal** | 1. Abre "Reportes".<br>2. Elige el tipo: **Resumen**, **Top de libros** (con rango de fechas) o **Atrasados**.<br>3. El sistema consulta y consolida los datos.<br>4. Presenta tablas/kpis descargables. |
-| **Flujos alternativos** | **2a.** Rango de fechas invertido → 400.<br>**3a.** Sin datos → mensaje "Sin información para el período".<br>**1a.** Rol `member` → 403. |
+| **Flujo principal** | 1. Abre "Reportes".<br>2. Elige el tipo: **Resumen**, **Top de libros** (con `limit` ≤ 50) o **Atrasados**.<br>3. El sistema consulta y consolida los datos.<br>4. Presenta tablas/kpis descargables. |
+| **Flujos alternativos** | **2a.** `limit` fuera del rango 1…50 → 400 `BAD_REQUEST`.<br>**3a.** Sin datos → mensaje "Sin información para el período".<br>**1a.** Rol `member` → 403 `FORBIDDEN`. |
 | **Postcondiciones** | La dirección dispone de indicadores actualizados para la toma de decisiones. |
 
 ---
@@ -398,8 +398,8 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 |---|---|
 | **Actores** | Todos los autenticados |
 | **Precondiciones** | Existe una sesión activa. |
-| **Flujo principal** | 1. Presiona "Cerrar sesión".<br>2. El frontend elimina el token del almacenamiento.<br>3. Redirige al login.<br>4. Auditoría `LOGOUT`. |
-| **Flujos alternativos** | **1a.** Token ya expirado → redirección directa al login con aviso "Sesión expirada". |
+| **Flujo principal** | 1. Presiona "Cerrar sesión".<br>2. El frontend elimina el token del almacenamiento.<br>3. Redirige al login.<br>4. No hay llamada al servidor: al ser JWT *stateless* no existe endpoint de cierre; la sesión termina cuando el token se descarta (o expira a las 8 h). |
+| **Flujos alternativos** | **1a.** Token ya expirado → el interceptor de 401 limpia el token y redirige al login con aviso "Sesión inválida o expirada". |
 | **Postcondiciones** | No queda token utilizable en el cliente. |
 
 ---
@@ -410,6 +410,6 @@ Formato: **Como** [actor], **quiero** [acción], **para** [beneficio]. Cada hist
 |---|---|
 | **Actores** | Miembro (principal); Sistema (en el flujo de caducidad) |
 | **Precondiciones** | Sesión `member`. |
-| **Flujo principal** | 1. Abre "Mis préstamos" (`GET /api/loans/my`).<br>2. Ve libro, ejemplar, fecha de préstamo, vencimiento, estado y multa asociada.<br>3. Al mismo tiempo, el sistema marca `cancelled` las reservas con `expires_at < hoy` y `overdue` los préstamos vencidos. |
-| **Flujos alternativos** | **1a.** Sin préstamos → estado vacío.<br>**3a.** El miembro intenta consultar préstamos de otro → 403 (IDOR). |
+| **Flujo principal** | 1. Abre "Mis préstamos" (`GET /api/loans/my`).<br>2. Ve libro, ejemplar, fecha de préstamo, vencimiento, estado y multa asociada.<br>3. Al consultar se refrescan los estados derivados: los préstamos `active` vencidos pasan a `overdue` (`refreshOverdueStatus`) y, al listar reservas, las caducadas pasan a `cancelled` (`expireStale`). |
+| **Flujos alternativos** | **1a.** Sin préstamos → estado vacío.<br>**3a.** El miembro intenta ver el detalle de un préstamo de otro vía `GET /api/loans/:id` → 403 `FORBIDDEN` "Solo puedes consultar tus propios préstamos" (control IDOR, ERR-10). |
 | **Postcondiciones** | El usuario conoce su situación exacta y los estados derivados quedan actualizados. |

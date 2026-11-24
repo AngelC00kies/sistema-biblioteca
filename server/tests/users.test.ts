@@ -24,6 +24,20 @@ describe('GET /api/users', () => {
     expect(res.status).toBe(403);
   });
 
+  it('RB-USR-16: el bibliotecario consulta solo socios activos para registrar préstamos', async () => {
+    const res = await request(app)
+      .get('/api/users')
+      .query({ role: 'member', status: 'active' })
+      .set('Authorization', await asLibrarian());
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeGreaterThan(0);
+    for (const user of res.body.data) {
+      expect(user.role).toBe('member');
+      expect(user.status).toBe('active');
+    }
+  });
+
   it('SE-USR-03: la lista exige autenticación', async () => {
     const res = await request(app).get('/api/users');
     expect(res.status).toBe(401);

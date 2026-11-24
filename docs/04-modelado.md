@@ -71,7 +71,6 @@ usecaseDiagram
   Mem --> UC13
 
   Sys --> UC16
-  Sys --> UC9
 
   UC8 ..> UC9 : <<extend>>
   UC8 ..> UC13 : <<extend>>
@@ -80,9 +79,9 @@ usecaseDiagram
 
 ### Explicación
 
-El diagrama de casos de uso representa **quién hace qué** en el SGB desde la perspectiva del usuario, y es la notación elegida porque es el artefacto UML que mejor traduce los requisitos funcionales (RF-01…RF-55) a un lenguaje comprensible por la biblioteca sin necesidad de conocimientos técnicos. Se identifican los tres actores principales del RBAC —Administrador, Bibliotecario y Miembro—, más un actor secundario "Reloj/Sistema" que encapsula las tareas automáticas (caducidad de reservas a los 7 días y marcaje de atrasos), de modo que quede explícito que esos comportamientos no dependen de una persona.
+El diagrama de casos de uso representa **quién hace qué** en el SGB desde la perspectiva del usuario, y es la notación elegida porque es el artefacto UML que mejor traduce los requisitos funcionales (RF-01…RF-55) a un lenguaje comprensible por la biblioteca sin necesidad de conocimientos técnicos. Se identifican los tres actores principales del RBAC —Administrador, Bibliotecario y Miembro—, más un actor secundario "Reloj/Sistema" que encapsula las tareas automáticas (caducidad de reservas a los 7 días, RF-43, y marcaje de préstamos atrasados al consultar, RF-35), de modo que quede explícito que esos comportamientos no dependen de una persona.
 
-La relación de **generalización** `Admin --|> Lib` indica que el administrador hereda todos los casos de uso del bibliotecario y añade los suyos exclusivos (gestionar usuarios y ver auditoría), lo que refleja exactamente la matriz RBAC del proyecto. Las conexiones `-->` muestran la participación directa de cada actor, mientras que las relaciones `<<extend>>` modelan comportamientos opcionales: registrar una devolución puede derivar en la generación de una multa, un préstamo puede bloquearse por deuda, y la consulta del catálogo puede terminar en una reserva cuando no hay disponibilidad. Elegir casos de uso (y no otro diagrama) para esta primera visión obedece a que el documento 03 desarrolla cada uno con precondiciones, flujos alternativos y postcondiciones, y este diagrama funciona como índice visual de ese contenido.
+La relación de **generalización** `Admin --|> Lib` indica que el administrador hereda todos los casos de uso del bibliotecario y añade los suyos exclusivos (gestionar usuarios y ver auditoría), lo que refleja exactamente la matriz RBAC del proyecto. Las conexiones `-->` muestran la participación directa de cada actor, mientras que las relaciones `<<extend>>` modelan comportamientos opcionales: un préstamo puede extenderse en su devolución correspondiente, un préstamo puede bloquearse por deuda pendiente que conduce al pago de la multa, y la consulta del catálogo puede terminar en una reserva cuando no hay disponibilidad. Elegir casos de uso (y no otro diagrama) para esta primera visión obedece a que el documento 03 desarrolla cada uno con precondiciones, flujos alternativos y postcondiciones, y este diagrama funciona como índice visual de ese contenido.
 
 ---
 
@@ -229,45 +228,38 @@ sequenceDiagram
   participant DB as SQLite (better-sqlite3)
 
   B->>F: selecciona usuario + ejemplar y confirma
-  F->>F: valida payload con Zod (client)
-  F->>R: POST /api/loans (copy_id, user_id) + Authorization Bearer JWT
-  R->>R: autenticar() + autorizar(admin|librarian)
-  R->>C: crearPrestamo(req, res)
-  C->>C: validar esquema con Zod
-  C->>S: crearPrestamo(dto)
-  S->>U: obtenerPorId(user_id)
-  U-->>S: usuario
-  alt usuario inactivo
-    S-->>C: error 403 USUARIO_INACTIVO
-    C-->>F: 403 {mensaje}
+  F->>F: valida atributos nativos del formulario (client)
+  F->>R: POST /api/loans (copyId, memberId) + Authorization Bearer JWT
+  R->>R: authenticate() + requireRole(admin|librarian)
+  R->>C: validar esquema createLoanSchema (Zod)
+  C->>S: loansService.create(dto, {actorId, ip})
+  alt ejemplar o socio no existe
+    S-->>C: 404 NOT_FOUND
+  else socio inactivo
+    S-->>C: 422 BUSINESS_RULE_VIOLATION
+  else ejemplar no disponible o con préstamo activo
+    S-->>C: 422 BUSINESS_RULE_VIOLATION
   else multa pendiente
     S->>S: consultar fines pending
-    S-->>C: error 409 DEUDA_PENDIENTE
-    C-->>F: 409 {monto}
+    S-->>C: 422 BUSINESS_RULE_VIOLATION (monto adeudado)
   else 5 prestamos activos
-    S->>L: contar activos(user_id)
-    S-->>C: error 409 LIMITE_PRESTAMOS
-    C-->>F: 409 {mensaje}
+    S->>L: contar activos(memberId)
+    S-->>C: 422 BUSINESS_RULE_VIOLATION (límite)
+  else fecha no futura
+    S-->>C: 400 BAD_REQUEST
   else todas las validaciones OK
-    S->>CP: obtenerPorId(copy_id)
-    CP-->>S: ejemplar
-    alt ejemplar no disponible
-      S-->>C: error 409 EJEMPLAR_NO_DISPONIBLE
-      C-->>F: 409 {estado actual}
-    else disponible
-      S->>DB: BEGIN TRANSACTION
-      S->>L: insertar(loan_date=hoy, due_date=hoy+14d, active)
-      L->>DB: INSERT INTO loans ...
-      DB-->>L: loan_id
-      S->>CP: actualizarEstado(copy_id, loaned)
-      CP->>DB: UPDATE copies SET status='loaned'
-      S->>A: registrar(LOAN_CREATED, loans, loan_id, ip)
-      A->>DB: INSERT INTO audit_logs
-      S->>DB: COMMIT
-      S-->>C: prestamo creado
-      C-->>F: 201 {id, loan_date, due_date}
-      F-->>B: toast "Préstamo registrado - vence el DD/MM"
-    end
+    S->>DB: BEGIN TRANSACTION
+    S->>L: insertar(loan_date=hoy, due_date=hoy+14d, active)
+    L->>DB: INSERT INTO loans ...
+    DB-->>L: loan_id
+    S->>CP: actualizarEstado(copyId, loaned)
+    CP->>DB: UPDATE copies SET status='loaned'
+    S->>DB: COMMIT
+    S->>A: registrar(LOAN_CREATED, loans, loan_id, ip)
+    A->>DB: INSERT INTO audit_logs (después del COMMIT; un fallo de auditoría no revierte el préstamo)
+    S-->>C: prestamo creado
+    C-->>F: 201 {id, loan_date, due_date, status, book_title}
+    F-->>B: toast "Préstamo registrado - vence el DD/MM"
   end
 ```
 
@@ -275,7 +267,7 @@ sequenceDiagram
 
 Esta secuencia ilustra el **flujo completo de una operación transaccional crítica** del SGB: la creación de un préstamo. Se eligió este escenario porque concentra la mayor parte de las reglas de negocio (RF-23…RF-28): disponibilidad del ejemplar, estado del usuario, ausencia de deuda, límite de cinco préstamos activos y cálculo automático del plazo de 14 días. El diagrama muestra explícitamente el **recorrido por las capas** rutas → controlador → servicio → repositorios → base de datos, de modo que sirva como comprobación visual de que el backend respeta la arquitectura en capas descrita en el documento 05.
 
-Los fragmentos `alt/else` codifican las cinco condiciones de error que deben rechazarse con 403 o 409 antes de tocar la base de datos, junto con la ruta feliz. En la rama exitosa se observa la **transacción atómica** (`BEGIN`…`COMMIT`): la inserción del préstamo, el cambio de estado del ejemplar a `loaned` y el registro de auditoría se ejecutan juntos, de modo que un fallo intermedio hace `ROLLBACK` y el sistema nunca queda en un estado inconsistente (un ejemplar prestado sin préstamo, o un préstamo sin bitácora). La numeración `autonumber` facilita referenciar pasos en las pruebas de integración, y el paso final (respuesta 201 + mensaje con la fecha de vencimiento) conecta el contrato de la API con el criterio de aceptamiento RU-10 de la interfaz.
+Los fragmentos `alt/else` codifican las condiciones de error que deben rechazarse con 404, 400 o 422 antes de tocar la base de datos (los códigos reales de `AppError`: `NOT_FOUND`, `BAD_REQUEST`, `BUSINESS_RULE_VIOLATION`), junto con la ruta feliz. En la rama exitosa se observa la **transacción atómica** (`BEGIN`…`COMMIT`): la inserción del préstamo y el cambio de estado del ejemplar a `loaned` se ejecutan juntos, de modo que un fallo intermedio hace `ROLLBACK` y el sistema nunca queda en un estado inconsistente (un ejemplar prestado sin préstamo); la auditoría (`LOAN_CREATED`) se escribe después del `COMMIT` y, si falla, solo se registra el error sin revertir el negocio (trazabilidad sin acoplamiento). La numeración `autonumber` facilita referenciar pasos en las pruebas de integración (casos `FC-PRE-01`…`FC-PRE-06`), y el paso final (respuesta 201 + mensaje con la fecha de vencimiento) conecta el contrato de la API con el criterio de aceptamiento RU-10 de la interfaz.
 
 ---
 
@@ -297,45 +289,47 @@ sequenceDiagram
   U->>F: ingresa username y password
   F->>F: validación Zod en cliente (vacíos, longitudes)
   F->>R: POST /api/auth/login {username, password}
-  Note over R: express-rate-limit (10 intentos / 15 min)
+  Note over R: express-rate-limit (20 intentos / 15 min por IP)
   R->>C: login(req, res)
-  C->>C: validar payload con Zod
-  C->>S: autenticar(username, password)
-  S->>RE: buscarPorUsername(username)
+  C->>C: validar payload con Zod (username, password)
+  C->>S: authService.login(username, password, {ip})
+  S->>RE: findByUsername(username)
   RE->>DB: SELECT * FROM users WHERE username = ?
   DB-->>RE: fila o vacio
   RE-->>S: usuario | null
 
   alt usuario no existe o password incorrecta
-    S->>S: bcrypt.compare(false) en rama falsa
+    S->>S: bcrypt.compare siempre ejecutado (hash falso en rama falsa)
     S->>A: registrar(LOGIN_FAILED, ip)
-    S-->>C: error 401 CREDENCIALES_INVALIDAS
-    C-->>F: 401 {mensaje generico}
-    F-->>U: "Credenciales inválidas"
+    A->>DB: INSERT INTO audit_logs
+    S-->>C: 401 UNAUTHORIZED "Usuario o contraseña incorrectos"
+    C-->>F: 401 {ok:false, code, message generico}
+    F-->>U: "Usuario o contraseña incorrectos"
   else status = inactive
     S->>A: registrar(LOGIN_BLOCKED, ip)
-    S-->>C: error 403 USUARIO_INACTIVO
-    C-->>F: 403 {mensaje}
-    F-->>U: "Usuario inactivo, contacte al administrador"
+    A->>DB: INSERT INTO audit_logs
+    S-->>C: 403 FORBIDDEN "La cuenta está inactiva"
+    C-->>F: 403 {ok:false, code, message}
+    F-->>U: mensaje de cuenta inactiva
   else credenciales validas y active
     S->>S: bcrypt.compare -> true (12 rondas)
-    S->>JWT: sign({id, username, role}, secret, expiresIn 8h)
-    JWT-->>S: token firmado
     S->>A: registrar(LOGIN_SUCCESS, ip)
     A->>DB: INSERT INTO audit_logs
+    S->>JWT: sign({sub, username, role}, secret, expiresIn 8h)
+    JWT-->>S: token firmado
     S-->>C: {token, user publico}
     C-->>F: 200 {token, user{username, role, full_name}}
     F->>R: GET /api/auth/me (con Bearer token)
-    R-->>F: 200 {id, username, role}
+    R-->>F: 200 {id, username, role, ...}
     F-->>U: redirige a dashboard segun rol
   end
 ```
 
 ### Explicación
 
-La segunda secuencia cubre el **ciclo de autenticación y autorización**, que es el requisito transversal RS-01…RS-03 del proyecto. Se eligió el login porque concentra las decisiones de seguridad más importantes del SGB: validación de entrada con Zod, verificación del hash bcrypt de 12 rondas (que justifica el límite de 2 segundos de RNF-05), bloqueo de usuarios con `status='inactive'` (RF-03), emisión del JWT con expiración de 8 horas (RS-08) y registro de auditoría tanto en el éxito como en el fracaso (RF-05), además del *rate limiting* de 10 intentos por 15 minutos aplicado antes de llegar al controlador (RS-07).
+La segunda secuencia cubre el **ciclo de autenticación y autorización**, que es el requisito transversal RS-01…RS-03 del proyecto. Se eligió el login porque concentra las decisiones de seguridad más importantes del SGB: validación de entrada con Zod, verificación del hash bcrypt de 12 rondas (que justifica el límite de 2 segundos de RNF-05), bloqueo de usuarios con `status='inactive'` (RF-03), emisión del JWT con expiración de 8 horas (RS-08) y registro de auditoría tanto en el éxito como en el fracaso (RF-05), además del *rate limiting* de 20 intentos por 15 minutos por IP aplicado antes de llegar al controlador (RS-07).
 
-El diagrama deja ver dos decisiones deliberadas de diseño. Primero, la **respuesta genérica** en la rama de credenciales inválidas: el sistema no distingue entre "usuario inexistente" y "contraseña incorrecta", evitando que un atacante enumere cuentas, mientras que el caso del usuario inactivo sí tiene mensaje propio porque es una condición que el propio usuario debe conocer. Segundo, el **doble paso** posterior al login: el frontend recibe el token y acto seguido llama a `GET /api/auth/me` para reconstruir el estado de sesión, de manera que la sesión en el cliente siempre se deriva del servidor y nunca de datos confiados localmente. Al igual que en la secuencia anterior, cada interacción está etiquetada con el método HTTP y el repositorio implicado, lo que permite traducir el diagrama directamente en los casos de prueba de integración IN-01…IN-04.
+El diagrama deja ver dos decisiones deliberadas de diseño. Primero, la **respuesta genérica** en la rama de credenciales inválidas: el sistema no distingue entre "usuario inexistente" y "contraseña incorrecta" (el mismo mensaje `UNAUTHORIZED` y el `bcrypt.compare` siempre ejecutado), evitando que un atacante enumere cuentas, mientras que el caso del usuario inactivo sí tiene mensaje propio (`FORBIDDEN`) porque es una condición que el propio usuario debe conocer. Segundo, el **doble paso** posterior al login: el frontend recibe el token y acto seguido llama a `GET /api/auth/me` para reconstruir el estado de sesión, de manera que la sesión en el cliente siempre se deriva del servidor y nunca de datos confiados localmente. Al igual que en la secuencia anterior, cada interacción está etiquetada con el método HTTP y el repositorio implicado, lo que permite traducir el diagrama directamente en los casos de prueba de integración `FC-AU-01`…`FC-AU-12`.
 
 ---
 
@@ -351,7 +345,7 @@ graph TD
   end
 
   subgraph RED["Transporte - HTTP / JSON"]
-    API["API REST<br/>puerto 3000"]
+    API["API REST<br/>puerto 4000"]
     MW1["helmet + cors"]
     MW2["express-rate-limit"]
     MW3["JSON body parser + Zod"]
@@ -411,22 +405,19 @@ graph LR
     subgraph FROUT["Enrutamiento"]
       ROUT["Router principal<br/>rutas protegidas por rol"]
     end
-    subgraph FPAG["Paginas"]
-      PG_LOGIN["Login"]
-      PG_DASH["Dashboard"]
-      PG_BOOKS["Libros + Ejemplares"]
-      PG_CAT["Categorias"]
-      PG_LOAN["Registrar prestamo"]
-      PG_RET["Devolucion"]
-      PG_LOANS["Lista de prestamos"]
-      PG_RES["Reservas"]
-      PG_USERS["Usuarios"]
-      PG_FINE["Multas"]
-      PG_REP["Reportes"]
-      PG_AUD["Auditoria"]
+    subgraph FPAG["Paginas (9)"]
+      PG_LOGIN["LoginPage (/login)"]
+      PG_DASH["DashboardPage (/)"]
+      PG_BOOKS["BooksPage (/libros)"]
+      PG_LOAN["LoansPage (/prestamo y /mis-prestamos)"]
+      PG_RES["ReservationsPage (/reservas)"]
+      PG_FINE["FinesPage (/multas y /mis-multas)"]
+      PG_USERS["UsersPage (/usuarios)"]
+      PG_REP["ReportsPage (/reportes)"]
+      PG_AUD["AuditPage (/auditoria)"]
     end
-    subgraph FAPI["Servicios HTTP"]
-      SVC_API["apiClient (fetch + JWT + refresh de error)"]
+    subgraph FAPI["Cliente HTTP"]
+      SVC_API["api() en api/client.ts<br/>(fetch + Bearer JWT + limpieza de token en 401)"]
     end
     ROUT --> FPAG --> FAPI
   end
@@ -444,19 +435,19 @@ graph LR
       RT_REP["reports.routes"]
       RT_AUD["audit.routes"]
     end
-    subgraph BCTRL["controladores/"]
-      CTRL["AuthController<br/>UserController<br/>BookController<br/>LoanController<br/>ReservationController<br/>FineController<br/>ReportController<br/>AuditController"]
+    subgraph BCTRL["controladores/ (10)"]
+      CTRL["authController<br/>usersController<br/>categoriesController<br/>booksController<br/>copiesController<br/>loansController<br/>reservationsController<br/>finesController<br/>reportsController<br/>auditController"]
     end
-    subgraph BSERV["servicios/"]
-      SERV["Auth / User / Category / Book<br/>Copy / Loan / Reservation / Fine<br/>Report / Audit Services<br/>(reglas de negocio + transacciones)"]
+    subgraph BSERV["servicios/ (8)"]
+      SERV["authService, usersService,<br/>categoriesService, booksService,<br/>loansService, reservationsService,<br/>finesService, reportsService<br/>(reglas de negocio + transacciones)"]
     end
-    subgraph BREP["repositorios/"]
-      REP["UserRepo, CategoryRepo, BookRepo,<br/>CopyRepo, LoanRepo, ReservationRepo,<br/>FineRepo, AuditRepo<br/>(SQL parametrizado)"]
+    subgraph BREP["repositorios/ (8)"]
+      REP["usersRepository, categoriesRepository,<br/>booksRepository, loansRepository,<br/>reservationsRepository, finesRepository,<br/>reportsRepository, auditRepository<br/>(SQL parametrizado)"]
     end
     subgraph BMW["middleware/"]
-      MWJ["authenticate + authorize(roles)"]
-      MWZ["validate(schema)"]
-      MWE["errorHandler"]
+      MWJ["authenticate + requireRole(...roles)<br/>(STAFF_ROLES)"]
+      MWZ["validateBody / validateQuery (Zod)"]
+      MWE["asyncHandler + errorHandler"]
     end
     BRUT --> BCTRL --> BSERV --> BREP
   end
@@ -488,6 +479,6 @@ graph LR
 
 ### Explicación
 
-El diagrama de componentes desglosa el sistema en **módulos físicos de código**: las carpetas y archivos concretos que conforman el frontend (`pages/`, `services/`, enrutamiento) y el backend (`rutas/`, `controladores/`, `servicios/`, `repositorios/`, `middleware/`), además de los artefactos compartidos (esquemas Zod y tipos) y los índices de la base de datos. Se eligió este diagrama complementario al de arquitectura porque, mientras el anterior explica *cómo se comunica el sistema con el exterior*, este explica *cómo está organizado internamente el código*, que es lo que un desarrollador necesita para ubicar dónde implementar cada requisito.
+El diagrama de componentes desglosa el sistema en **módulos físicos de código**: las carpetas y archivos concretos que conforman el frontend (`pages/`, `api/`, `components/`, `context/`, enrutamiento) y el backend (`modules/*/routes|controller|service|repository`, `middleware/`), además de los artefactos compartidos (tipos del contrato) y los índices de la base de datos. Se eligió este diagrama complementario al de arquitectura porque, mientras el anterior explica *cómo se comunica el sistema con el exterior*, este explica *cómo está organizado internamente el código*, que es lo que un desarrollador necesita para ubicar dónde implementar cada requisito.
 
-La lectura clave es la **asimetría de dependencias**: en el frontend, el enrutamiento delega en las páginas y éstas en un único cliente HTTP que centraliza la inyección del token; en el backend, la flecha única `rutas → controladores → servicios → repositorios` hace explícito que ninguna capa puede saltarse a otra (los repositorios jamás invocan controladores, y los controladores no escriben SQL). Los middlewares se muestran como una pila previa a las rutas (`authenticate → validate → rutas`) porque representan el orden real de ejecución en Express. Los esquemas Zod y los tipos DTO se conectan a ambas orillas para indicar que el **contrato de la API** es compartido y es lo único que acopla cliente y servidor, lo que permite evolucionarlos de forma independiente. Por último, los índices se listan junto a SQLite porque son la palanca de rendimiento concreta detrás de RNF-05 y RR-05.
+La lectura clave es la **asimetría de dependencias**: en el frontend, el enrutamiento delega en las páginas y éstas en un único cliente HTTP (`api/client.ts`) que centraliza la inyección del token; en el backend, la flecha única `rutas → controladores → servicios → repositorios` hace explícito que ninguna capa puede saltarse a otra (los repositorios jamás invocan controladores, y los controladores no escriben SQL). Los middlewares se muestran como una pila previa a las rutas (`authenticate → requireRole → validateBody/validateQuery → handler`) porque representan el orden real de ejecución en Express. Los esquemas Zod viven en el servidor (el cliente usa atributos nativos de formulario) y los tipos del contrato se conectan a ambas orillas para indicar que el **contrato de la API** es lo único que acopla cliente y servidor, lo que permite evolucionarlos de forma independiente. Por último, los índices se listan junto a SQLite porque son la palanca de rendimiento concreta detrás de RR-01 y RR-05.
