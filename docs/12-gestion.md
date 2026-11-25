@@ -121,7 +121,7 @@ El hito final (`milestone` del 03/01/2027) marca la entrega del entregable compl
 | Commits | Conventional Commits | Historial legible y semántico |
 | Gestión de tareas | Tablero (GitHub Projects / tablas Markdown en `12-gestion.md`) | Sprint backlog y estado |
 | Planificación | Skill de planificación con archivos (`task_plan.md`, `progress.md`) | Seguimiento diario |
-| Documentación | Markdown + Mermaid | Los 12 documentos de `docs/` |
+| Documentación | Markdown + Mermaid | Los 13 documentos de `docs/` |
 | Análisis estático | `npx tsc --noEmit` (server y client), `npm audit`, `npm test` | Calidad y seguridad |
 | Copias de seguridad | `sqlite3 .backup` / `VACUUM INTO` | Backup diario |
 | Comandos de ejecución | `npm install`; `npm run seed`, `npm run start` / `npm run dev`, `npm test`, `node scripts/smoke.mjs` (en `server/`); `npm run dev`, `npm run build` (en `client/`) — `npm run coverage` queda pendiente de instalar `@vitest/coverage-v8` | Instalación, datos de demostración, API, pruebas, humo y build |

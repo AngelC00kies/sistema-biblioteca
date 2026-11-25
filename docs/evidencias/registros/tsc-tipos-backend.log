@@ -1,0 +1,6 @@
+$ cd server && npx tsc -p tsconfig.json --noEmit
+# 2026-11-25T20:57:20.421Z
+
+(sin salida de errores — la verificación de tipos pasó)
+
+[exit code 0]

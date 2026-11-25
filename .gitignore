@@ -23,3 +23,6 @@ Thumbs.db
 # Registros
 *.log
 npm-debug.log*
+
+# Excepción: los registros de evidencia de pruebas sí se versionan
+!docs/evidencias/registros/*.log

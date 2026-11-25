@@ -1,0 +1,25 @@
+$ cd server && node scripts/smoke.mjs
+# 2026-11-25T20:57:20.421Z
+
+=== Prueba de humo · Sistema de Gestión de Biblioteca ===
+
+  ✓ GET /api/health — status=up
+  ✓ Login de administrador — rol=admin
+  ✓ Login de bibliotecario — rol=librarian
+  ✓ Login de socio — rol=member
+  ✓ Rechazo de contraseña inválida — 401 correcto
+  ✓ Consulta del catálogo (socio) — 1 resultado(s)
+  ✓ Reserva de un libro sin disponibilidad — "El principito" → pending
+  ✓ Reserva duplicada rechazada (409) — 409 correcto
+  ✓ Registro de préstamo (bibliotecario) — préstamo #12, vence 2026-12-09
+  ✓ Préstamo duplicado rechazado (422) — 422 correcto
+  ✓ Socio no puede registrar préstamos (403) — 403 correcto
+  ✓ Devolución del préstamo — estado=returned, multa=0
+  ✓ Reporte de resumen (admin) — libros=12, activos=4, vencidos=2
+  ✓ Auditoría registrada (admin) — 10 eventos recientes
+  ✓ Socio sin acceso a auditoría (403) — 403 correcto
+  ✓ Cancelación de reserva — estado=cancelled
+
+Resultado: 16/16 pasos correctos.
+
+[exit code 0]

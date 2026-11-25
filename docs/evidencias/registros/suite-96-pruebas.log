@@ -1,0 +1,36 @@
+$ cd server && npm test
+# 2026-11-25T20:57:20.421Z
+
+> biblioteca-server@1.0.0 test
+> vitest run
+
+
+ RUN  v2.1.9 C:/Users/Atom X/biblioteca/server
+
+ ✓ tests/reports.test.ts (8 tests) 913ms
+ ✓ tests/fines.test.ts (9 tests) 979ms
+   ✓ GET /api/fines > MUL-02: el socio ve solo sus multas y el total pendiente 334ms
+ ✓ tests/books.test.ts (15 tests) 1301ms
+   ✓ GET /api/books > FC-CAT-01: lista el catálogo con paginación y totales 324ms
+ ✓ tests/loans.test.ts (14 tests) 1687ms
+   ✓ POST /api/loans > FC-PRE-01: el bibliotecario registra un préstamo y el ejemplar pasa a prestado 384ms
+ ✓ tests/reservations.test.ts (12 tests) 1899ms
+   ✓ POST /api/reservations > FC-RES-01: el socio reserva un libro sin ejemplares disponibles 306ms
+   ✓ Gestión de reservas > FC-RES-12: al devolver un libro con reserva, la reserva pasa a "ready" 504ms
+ ✓ tests/auth.test.ts (12 tests) 2976ms
+   ✓ POST /api/auth/register > FC-AU-10: el administrador crea un socio y puede iniciar sesión 2070ms
+ ✓ tests/categories.test.ts (10 tests) 849ms
+ ✓ tests/users.test.ts (16 tests) 6813ms
+   ✓ GET /api/users > RB-USR-01: un bibliotecario no puede consultar el padrón de usuarios 316ms
+   ✓ POST /api/users > FC-USR-05: crea un usuario bibliotecario 1083ms
+   ✓ PUT /api/users/:id > FC-USR-09: actualiza la contraseña con validación de fortaleza 1898ms
+   ✓ DELETE /api/users/:id > FC-USR-12: un usuario sin historial se elimina definitivamente 1017ms
+   ✓ Auditoría > AUD-14: un bibliotecario no puede leer la auditoría 878ms
+   ✓ Integridad del token > SE-USR-15: el token conserva el rol actualizado tras cambiarlo 885ms
+
+ Test Files  8 passed (8)
+      Tests  96 passed (96)
+   Start at  16:57:40
+   Duration  12.93s (transform 2.95s, setup 0ms, collect 32.69s, tests 17.42s, environment 9ms, prepare 5.67s)
+
+[exit code 0]

@@ -122,7 +122,7 @@
 | RNF-09 | El sistema deberá utilizar **SQLite con WAL** y estar preparado para operar en un equipo de la biblioteca sin conexión a internet externa. | Operación local/offline | Revisión de configuración |
 | RNF-10 | El sistema deberá mantener una **cobertura de pruebas ≥ 80 %** en la capa de servicios. | ≥ 80 % líneas | Reporte Vitest |
 | RNF-11 | El sistema deberá compilar sin errores de tipo en TypeScript (`tsc --noEmit`) y pasar la suite completa de pruebas. | 0 errores, 96/96 pruebas | Comando de verificación (`npm test`) |
-| RNF-12 | El sistema deberá estar documentado con la documentación académica completa (12 documentos) y ejemplos de endpoints. | 12 docs entregados | Revisión del entregable |
+| RNF-12 | El sistema deberá estar documentado con la documentación académica completa (13 documentos) y ejemplos de endpoints. | 13 docs entregados | Revisión del entregable |
 | RNF-13 | El sistema deberá soportar navegadores modernos actuales (Chrome, Firefox, Edge, Safari — últimas 2 versiones). | Render correcto | Prueba manual FF-01…FF-08 |
 | RNF-14 | El sistema deberá ser responsive hasta **360 px** de ancho para las pantallas principales (login, catálogo, préstamos). | Sin desbordes | Revisión visual |
 | RNF-15 | El sistema deberá registrar un evento de auditoría en menos de **100 ms** adicional por petición. | Overhead < 100 ms | Revisión de código (middleware `audit` síncrono) |

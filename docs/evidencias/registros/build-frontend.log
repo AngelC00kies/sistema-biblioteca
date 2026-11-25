@@ -1,0 +1,17 @@
+$ cd client && npm run build
+# 2026-11-25T20:57:20.421Z
+
+> biblioteca-client@1.0.0 build
+> tsc --noEmit && vite build
+
+vite v6.4.6 building for production...
+transforming...
+✓ 2180 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.66 kB │ gzip:  0.38 kB
+dist/assets/index-Chr-ySyq.css    8.12 kB │ gzip:  2.41 kB
+dist/assets/index-CIWNWGtP.js   223.67 kB │ gzip: 68.57 kB
+✓ built in 7.23s
+
+[exit code 0]

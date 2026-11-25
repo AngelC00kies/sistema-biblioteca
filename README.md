@@ -12,7 +12,7 @@ acceso por roles, pruebas automatizadas y documentación técnica completa.
 
 ```
 biblioteca/
-├── docs/                      # Documentación académica (12 documentos)
+├── docs/                      # Documentación académica (13 documentos)
 │   ├── README.md              # Índice de la documentación
 │   ├── 01-problema.md         # Identificación del problema
 │   ├── 02-requisitos.md       # Requisitos funcionales y no funcionales
@@ -22,9 +22,17 @@ biblioteca/
 │   ├── 06-base-de-datos.md    # ER, DDL, normalización 3FN
 │   ├── 07-interfaces.md       # Prototipos de las pantallas
 │   ├── 08-seguridad.md        # Riesgos, RBAC, OWASP
+│   ├── 09-evidencias-de-pruebas.md  # Registros, reportes y capturas (sección 8)
 │   ├── 10-pruebas.md          # Estrategia, casos y evidencia de ejecución
 │   ├── 11-calidad.md          # ISO 25010
-│   └── 12-gestion.md          # Planificación y trazabilidad
+│   ├── 12-gestion.md          # Planificación y trazabilidad
+│   └── evidencias/            # Material crudo de la verificación
+│       ├── capturas/          # 16 PNG con nombre descriptivo (Playwright)
+│       ├── registros/         # Salidas UTF-8 de tsc, suite, cobertura, build, humo
+│       └── reportes/          # suite.json + reporte HTML de cobertura
+│
+├── scripts/
+│   └── regenerar-evidencias.mjs  # Regenera registros y reportes (UTF-8)
 │
 ├── database/                  # Consultas SQL del sistema
 │   ├── schema.sql             # DDL completo (8 tablas + 16 índices), espejo de schema.ts
@@ -46,6 +54,7 @@ biblioteca/
 │
 └── client/                    # SPA · React 18 + TypeScript + Vite
     ├── public/favicon.svg     # Icono del navegador (monograma SVG)
+    ├── scripts/capturas.mjs   # Generador de capturas de evidencia (Playwright)
     └── src/
         ├── api/client.ts      # Cliente HTTP con JWT y manejo de errores
         ├── context/           # Sesión y roles (AuthContext)

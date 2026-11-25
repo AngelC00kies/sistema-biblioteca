@@ -1,0 +1,108 @@
+$ cd server && npm run coverage
+# 2026-11-25T20:57:20.421Z
+
+> biblioteca-server@1.0.0 coverage
+> vitest run --coverage
+
+
+ RUN  v2.1.9 C:/Users/Atom X/biblioteca/server
+      Coverage enabled with v8
+
+ ✓ tests/reports.test.ts (8 tests) 934ms
+ ✓ tests/fines.test.ts (9 tests) 996ms
+   ✓ GET /api/fines > MUL-02: el socio ve solo sus multas y el total pendiente 329ms
+ ✓ tests/books.test.ts (15 tests) 1474ms
+   ✓ GET /api/books > FC-CAT-01: lista el catálogo con paginación y totales 372ms
+ ✓ tests/loans.test.ts (14 tests) 1891ms
+   ✓ POST /api/loans > FC-PRE-01: el bibliotecario registra un préstamo y el ejemplar pasa a prestado 455ms
+ ✓ tests/reservations.test.ts (12 tests) 2005ms
+   ✓ POST /api/reservations > FC-RES-01: el socio reserva un libro sin ejemplares disponibles 358ms
+   ✓ Gestión de reservas > FC-RES-12: al devolver un libro con reserva, la reserva pasa a "ready" 511ms
+ ✓ tests/auth.test.ts (12 tests) 3759ms
+   ✓ POST /api/auth/login > FC-AU-01: autentica a un administrador con credenciales válidas 302ms
+   ✓ POST /api/auth/register > FC-AU-10: el administrador crea un socio y puede iniciar sesión 2913ms
+ ✓ tests/categories.test.ts (10 tests) 886ms
+   ✓ GET /api/categories > CAT-01: cualquier usuario autenticado puede listar las categorías 323ms
+ ✓ tests/users.test.ts (16 tests) 9232ms
+   ✓ GET /api/users > RB-USR-01: un bibliotecario no puede consultar el padrón de usuarios 321ms
+   ✓ POST /api/users > FC-USR-05: crea un usuario bibliotecario 1522ms
+   ✓ PUT /api/users/:id > FC-USR-09: actualiza la contraseña con validación de fortaleza 2874ms
+   ✓ DELETE /api/users/:id > FC-USR-12: un usuario sin historial se elimina definitivamente 1399ms
+   ✓ Auditoría > AUD-14: un bibliotecario no puede leer la auditoría 1068ms
+   ✓ Integridad del token > SE-USR-15: el token conserva el rol actualizado tras cambiarlo 1303ms
+
+ Test Files  8 passed (8)
+      Tests  96 passed (96)
+   Start at  16:57:57
+   Duration  16.85s (transform 2.47s, setup 0ms, collect 36.61s, tests 21.18s, environment 15ms, prepare 6.22s)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   88.53 |    74.86 |   87.42 |   88.53 |                   
+ src               |     100 |       50 |     100 |     100 |                   
+  app.ts           |     100 |       50 |     100 |     100 | 30-41             
+ src/config        |     100 |       25 |     100 |     100 |                   
+  env.ts           |     100 |       25 |     100 |     100 | 7-12              
+ src/db            |   83.87 |    57.14 |     100 |   83.87 |                   
+  connection.ts    |   83.33 |    57.14 |     100 |   83.33 | 17-18,33-34,44    
+  schema.ts        |     100 |      100 |     100 |     100 |                   
+ src/errors        |     100 |      100 |     100 |     100 |                   
+  AppError.ts      |     100 |      100 |     100 |     100 |                   
+ src/middleware    |   76.11 |    75.67 |      90 |   76.11 |                   
+  auth.ts          |   97.91 |    82.35 |     100 |   97.91 | 83                
+  errorHandler.ts  |   46.29 |    55.55 |   66.66 |   46.29 | 23-31,36-50,53-58 
+  validate.ts      |   93.75 |    81.81 |     100 |   93.75 | 36-37             
+ src/modules/audit |      90 |    33.33 |     100 |      90 |                   
+  controller.ts    |     100 |       50 |     100 |     100 | 10                
+  repository.ts    |   79.31 |    28.57 |     100 |   79.31 | 22-24,26-28       
+  routes.ts        |     100 |      100 |     100 |     100 |                   
+ src/modules/auth  |    98.7 |    75.86 |     100 |    98.7 |                   
+  controller.ts    |     100 |      100 |     100 |     100 |                   
+  routes.ts        |     100 |        0 |     100 |     100 | 16                
+  service.ts       |   97.64 |    73.91 |     100 |   97.64 | 87-88             
+ src/modules/books |   77.83 |    76.92 |   74.19 |   77.83 |                   
+  controller.ts    |   89.36 |    77.77 |   71.42 |   89.36 | 28-29,45-47       
+  repository.ts    |   85.29 |       75 |   78.57 |   85.29 | ...00-201,204-210 
+  routes.ts        |     100 |      100 |     100 |     100 |                   
+  service.ts       |   58.82 |    78.94 |      70 |   58.82 | ...50-178,181-195 
+ ...les/categories |   80.57 |       85 |   76.47 |   80.57 |                   
+  controller.ts    |   71.87 |      100 |      60 |   71.87 | 10-11,23-29       
+  repository.ts    |      90 |    85.71 |   85.71 |      90 | 36-39             
+  routes.ts        |     100 |      100 |     100 |     100 |                   
+  service.ts       |   69.56 |       80 |      80 |   69.56 | 36-58             
+ ...modules/copies |   70.73 |      100 |       0 |   70.73 |                   
+  controller.ts    |   29.41 |      100 |       0 |   29.41 | 6-11,14-19        
+  routes.ts        |     100 |      100 |       0 |     100 |                   
+ src/modules/fines |     100 |    82.14 |     100 |     100 |                   
+  controller.ts    |     100 |       75 |     100 |     100 | 10                
+  repository.ts    |     100 |    72.72 |     100 |     100 | 45,61,70          
+  routes.ts        |     100 |      100 |     100 |     100 |                   
+  service.ts       |     100 |     92.3 |     100 |     100 | 43                
+ src/modules/loans |   96.12 |    72.54 |     100 |   96.12 |                   
+  controller.ts    |     100 |       60 |     100 |     100 | 18-20             
+  repository.ts    |   91.78 |    69.23 |     100 |   91.78 | 65-66,68-71       
+  routes.ts        |     100 |      100 |     100 |     100 |                   
+  service.ts       |   96.61 |    78.57 |     100 |   96.61 | 39-40,48-49       
+ ...odules/reports |     100 |    84.61 |     100 |     100 |                   
+  controller.ts    |     100 |       75 |     100 |     100 | 10                
+  repository.ts    |     100 |    83.33 |     100 |     100 | 35                
+  routes.ts        |     100 |      100 |     100 |     100 |                   
+  service.ts       |     100 |      100 |     100 |     100 |                   
+ ...s/reservations |   86.46 |       80 |      90 |   86.46 |                   
+  controller.ts    |   84.21 |       80 |      80 |   84.21 | 38-43             
+  repository.ts    |   95.65 |    85.71 |     100 |   95.65 | 38-40             
+  routes.ts        |     100 |      100 |     100 |     100 |                   
+  service.ts       |   78.21 |    76.19 |   83.33 |   78.21 | 52-55,108-127     
+ src/modules/users |   93.58 |    73.68 |   95.65 |   93.58 |                   
+  controller.ts    |    90.9 |      100 |      80 |    90.9 | 13-15             
+  repository.ts    |   91.15 |    68.18 |     100 |   91.15 | ...14-116,118-120 
+  routes.ts        |     100 |      100 |     100 |     100 |                   
+  service.ts       |   93.26 |    63.63 |     100 |   93.26 | 35-36,78-82       
+ src/utils         |   80.48 |       60 |   57.14 |   80.48 |                   
+  date.ts          |    87.5 |       75 |      75 |    87.5 | 8-9               
+  logger.ts        |      76 |       50 |   33.33 |      76 | 32-33,37-38,41-42 
+-------------------|---------|----------|---------|---------|-------------------
+
+[exit code 0]

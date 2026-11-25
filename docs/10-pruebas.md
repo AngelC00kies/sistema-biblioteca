@@ -293,6 +293,8 @@ Incidencias reales encontradas al construir y verificar el sistema, con su ciclo
 
 Salidas de las verificaciones de cierre, ejecutadas en **noviembre de 2026** sobre el repositorio completo. Se transcriben las líneas principales de cada comando (las líneas de duración y hash varían en cada corrida).
 
+> **Ampliación completa:** los registros crudos, los reportes estructurados (`suite.json` y HTML de cobertura) y las **16 capturas del sistema funcionando** están en [`09-evidencias-de-pruebas.md`](09-evidencias-de-pruebas.md) (sección 8), con material reproducible en [`docs/evidencias/`](evidencias/).
+
 ### 6.1 Suite automatizada — `npm test` en `server/`
 
 ```text
