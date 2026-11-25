@@ -26,6 +26,10 @@ biblioteca/
 │   ├── 11-calidad.md          # ISO 25010
 │   └── 12-gestion.md          # Planificación y trazabilidad
 │
+├── database/                  # Consultas SQL del sistema
+│   ├── schema.sql             # DDL completo (8 tablas + 16 índices), espejo de schema.ts
+│   └── queries.sql            # 67 consultas reales por módulo + checks de integridad
+│
 ├── server/                    # API REST · Node.js + Express + TypeScript
 │   ├── src/
 │   │   ├── app.ts             # Composición de la aplicación (capa de entrada)
@@ -41,13 +45,27 @@ biblioteca/
 │   └── scripts/smoke.mjs      # Prueba de humo de extremo a extremo
 │
 └── client/                    # SPA · React 18 + TypeScript + Vite
+    ├── public/favicon.svg     # Icono del navegador (monograma SVG)
     └── src/
         ├── api/client.ts      # Cliente HTTP con JWT y manejo de errores
         ├── context/           # Sesión y roles (AuthContext)
-        ├── components/        # Layout, guardas de ruta, modales, badges
+        ├── components/        # Layout, BrandMark, guardas, modales, badges
+        │                      # (iconos con lucide-react)
         └── pages/             # Login, panel, libros, préstamos, reservas,
                                # multas, usuarios, reportes, auditoría
 ```
+
+**Scripts SQL (`database/`):** el esquema y las consultas están publicados como archivos ejecutables, espejo exacto del código:
+
+```bash
+# Crear la base desde cero (solo esquema)
+sqlite3 server/data/biblioteca.db < database/schema.sql
+
+# Repasar las 67 consultas reales del sistema, comentadas por módulo
+sqlite3 server/data/biblioteca.db < database/queries.sql
+```
+
+> `schema.sql` es idéntico a la constante `SCHEMA` de `server/src/db/schema.ts`; si cambia una, debe cambiar la otra. `queries.sql` documenta las sentencias de los 8 repositorios (`users`, `categories`, `books`, `loans`, `reservations`, `fines`, `reports`, `audit`) con sus parámetros y las consultas de integridad (`PRAGMA foreign_key_check`).
 
 ---
 
