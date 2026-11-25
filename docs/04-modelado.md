@@ -10,31 +10,33 @@
 ## 1. Diagrama de casos de uso
 
 ```mermaid
-usecaseDiagram
-  actor "Administrador" as Admin
-  actor "Bibliotecario" as Lib
-  actor "Miembro" as Mem
-  actor "Reloj / Sistema" as Sys
+%%{init: {"flowchart": {"curve": "basis", "nodeSpacing": 55, "rankSpacing": 75}}}%%
+flowchart LR
+  %% ---------- Actores (RBAC + actor secundario) ----------
+  Admin(["Administrador"])
+  Lib(["Bibliotecario"])
+  Mem(["Miembro"])
+  Sys(["Reloj / Sistema"])
 
-  Admin --|> Lib
+  %% ---------- Casos de uso (CU-01…CU-16) ----------
+  UC1("Iniciar sesión")
+  UC2("Cerrar sesión")
+  UC3("Gestionar usuarios")
+  UC4("Gestionar categorías")
+  UC5("Gestionar libros")
+  UC6("Gestionar ejemplares")
+  UC7("Consultar catálogo")
+  UC8("Registrar préstamo")
+  UC9("Registrar devolución")
+  UC10("Reservar libro")
+  UC11("Cancelar reserva")
+  UC12("Atender reserva")
+  UC13("Pagar multa")
+  UC14("Generar reportes")
+  UC15("Ver auditoría")
+  UC16("Caducar reservas")
 
-  usecase "Iniciar sesion" as UC1
-  usecase "Cerrar sesion" as UC2
-  usecase "Gestionar usuarios" as UC3
-  usecase "Gestionar categorias" as UC4
-  usecase "Gestionar libros" as UC5
-  usecase "Gestionar ejemplares" as UC6
-  usecase "Consultar catalogo" as UC7
-  usecase "Registrar prestamo" as UC8
-  usecase "Registrar devolucion" as UC9
-  usecase "Reservar libro" as UC10
-  usecase "Cancelar reserva" as UC11
-  usecase "Atender reserva" as UC12
-  usecase "Pagar multa" as UC13
-  usecase "Generar reportes" as UC14
-  usecase "Ver auditoria" as UC15
-  usecase "Caducar reservas" as UC16
-
+  %% ---------- Participación de cada actor ----------
   Admin --> UC1
   Admin --> UC2
   Admin --> UC3
@@ -72,16 +74,20 @@ usecaseDiagram
 
   Sys --> UC16
 
-  UC8 ..> UC9 : <<extend>>
-  UC8 ..> UC13 : <<extend>>
-  UC7 ..> UC10 : <<extend>>
+  %% ---------- Relaciones entre casos de uso ----------
+  UC8 -.->|"&lt;&lt;extend&gt;&gt;"| UC9
+  UC8 -.->|"&lt;&lt;extend&gt;&gt;"| UC13
+  UC7 -.->|"&lt;&lt;extend&gt;&gt;"| UC10
+
+  %% ---------- Generalización de actores (hueco hacia el padre) ----------
+  Admin --o Lib
 ```
 
 ### Explicación
 
 El diagrama de casos de uso representa **quién hace qué** en el SGB desde la perspectiva del usuario, y es la notación elegida porque es el artefacto UML que mejor traduce los requisitos funcionales (RF-01…RF-55) a un lenguaje comprensible por la biblioteca sin necesidad de conocimientos técnicos. Se identifican los tres actores principales del RBAC —Administrador, Bibliotecario y Miembro—, más un actor secundario "Reloj/Sistema" que encapsula las tareas automáticas (caducidad de reservas a los 7 días, RF-43, y marcaje de préstamos atrasados al consultar, RF-35), de modo que quede explícito que esos comportamientos no dependen de una persona.
 
-La relación de **generalización** `Admin --|> Lib` indica que el administrador hereda todos los casos de uso del bibliotecario y añade los suyos exclusivos (gestionar usuarios y ver auditoría), lo que refleja exactamente la matriz RBAC del proyecto. Las conexiones `-->` muestran la participación directa de cada actor, mientras que las relaciones `<<extend>>` modelan comportamientos opcionales: un préstamo puede extenderse en su devolución correspondiente, un préstamo puede bloquearse por deuda pendiente que conduce al pago de la multa, y la consulta del catálogo puede terminar en una reserva cuando no hay disponibilidad. Elegir casos de uso (y no otro diagrama) para esta primera visión obedece a que el documento 03 desarrolla cada uno con precondiciones, flujos alternativos y postcondiciones, y este diagrama funciona como índice visual de ese contenido.
+La relación de **generalización** `Admin --o Lib` —extremo hueco hacia el padre, equivalente al triángulo hueco de UML— indica que el administrador hereda todos los casos de uso del bibliotecario y añade los suyos exclusivos (gestionar usuarios y ver auditoría), lo que refleja exactamente la matriz RBAC del proyecto. Las conexiones `-->` muestran la participación directa de cada actor, mientras que las relaciones punteadas `-.->|"<<extend>>"|` modelan comportamientos opcionales: un préstamo puede extenderse en su devolución correspondiente, un préstamo puede bloquearse por deuda pendiente que conduce al pago de la multa, y la consulta del catálogo puede terminar en una reserva cuando no hay disponibilidad. Sobre la notación: Mermaid no dispone de un tipo de diagrama de casos de uso nativo, por lo que se representa con un `flowchart LR` que replica la notación UML —actores como nodos en estadio a la izquierda, casos de uso como nodos redondeados y las tres relaciones (asociación, generalización y extensión)—; así el diagrama sigue siendo un bloque Mermaid válido que se renderiza en GitHub y en cualquier visor Markdown, en lugar de sintaxis de otra herramienta que los visores no interpretan. Elegir casos de uso (y no otro diagrama) para esta primera visión obedece a que el documento 03 desarrolla cada uno con precondiciones, flujos alternativos y postcondiciones, y este diagrama funciona como índice visual de ese contenido.
 
 ---
 
@@ -256,7 +262,7 @@ sequenceDiagram
     CP->>DB: UPDATE copies SET status='loaned'
     S->>DB: COMMIT
     S->>A: registrar(LOAN_CREATED, loans, loan_id, ip)
-    A->>DB: INSERT INTO audit_logs (después del COMMIT; un fallo de auditoría no revierte el préstamo)
+    A->>DB: INSERT INTO audit_logs (después del COMMIT, un fallo de auditoría no revierte el préstamo)
     S-->>C: prestamo creado
     C-->>F: 201 {id, loan_date, due_date, status, book_title}
     F-->>B: toast "Préstamo registrado - vence el DD/MM"

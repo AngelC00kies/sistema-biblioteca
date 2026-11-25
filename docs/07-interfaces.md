@@ -424,7 +424,7 @@ graph TD
   DASH -->|admin, librarian| REP2["/reportes"]
   DASH -->|admin| AUD["/auditoria"]
   LIB --> EJE["modal: Ejemplares del libro<br/>alta y cambio de estado"]
-  LIB -->|Reservar (sin disponibilidad)| RES2
+  LIB -->|"Reservar (sin disponibilidad)"| RES2
   MIS3 -->|pago| MUL
   STAR["ruta desconocida *"] --> DASH
 
