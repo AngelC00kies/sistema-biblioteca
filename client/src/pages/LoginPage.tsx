@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { errorMessage } from '../api/client';
+import { BrandMark } from '../components/BrandMark';
 import { useAuth } from '../context/AuthContext';
 
 export function LoginPage() {
@@ -37,6 +38,9 @@ export function LoginPage() {
   return (
     <div className="login-page">
       <aside className="login-aside">
+        <div className="login-brand">
+          <BrandMark size={56} />
+        </div>
         <h1>Sistema de Gestión de Biblioteca</h1>
         <p>
           Biblioteca Pública Municipal “Ricardo Gómez”. Control de catálogo, préstamos,

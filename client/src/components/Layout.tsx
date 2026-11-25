@@ -1,5 +1,19 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import {
+  AlertTriangle,
+  ArrowLeftRight,
+  BarChart3,
+  BookOpen,
+  BookMarked,
+  Clock,
+  LayoutDashboard,
+  Library,
+  LogOut,
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { BrandMark } from './BrandMark';
 
 const ROLE_LABEL: Record<string, string> = {
   admin: 'Administrador',
@@ -22,20 +36,25 @@ export function Layout() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <span className="brand">
-          Biblioteca R. Gómez
-          <small>Sistema de gestión integrado</small>
-        </span>
+        <div className="brand">
+          <BrandMark />
+          <span className="brand-text">
+            Biblioteca R. Gómez
+            <small>Sistema de gestión integrado</small>
+          </span>
+        </div>
 
         <span className="nav-section">General</span>
         <NavLink to="/" end className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}>
-          <span>▦</span> Panel principal
+          <LayoutDashboard size={18} strokeWidth={2} aria-hidden />
+          Panel principal
         </NavLink>
         <NavLink
           to="/libros"
           className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
         >
-          <span>▤</span> Catálogo de libros
+          <Library size={18} strokeWidth={2} aria-hidden />
+          Catálogo de libros
         </NavLink>
 
         <span className="nav-section">Operación</span>
@@ -44,34 +63,39 @@ export function Layout() {
             to="/prestamos"
             className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
           >
-            <span>⇄</span> Préstamos y devoluciones
+            <ArrowLeftRight size={18} strokeWidth={2} aria-hidden />
+            Préstamos y devoluciones
           </NavLink>
         )}
         <NavLink
           to="/mis-prestamos"
           className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
         >
-          <span>📖</span> {isStaff ? 'Préstamos propios' : 'Mis préstamos'}
+          <BookOpen size={18} strokeWidth={2} aria-hidden />
+          {isStaff ? 'Préstamos propios' : 'Mis préstamos'}
         </NavLink>
         <NavLink
           to="/reservas"
           className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
         >
-          <span>⏱</span> Reservas
+          <Clock size={18} strokeWidth={2} aria-hidden />
+          Reservas
         </NavLink>
         {isStaff ? (
           <NavLink
             to="/multas"
             className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
           >
-            <span>⚠</span> Multas
+            <AlertTriangle size={18} strokeWidth={2} aria-hidden />
+            Multas
           </NavLink>
         ) : (
           <NavLink
             to="/mis-multas"
             className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
           >
-            <span>⚠</span> Mis multas
+            <AlertTriangle size={18} strokeWidth={2} aria-hidden />
+            Mis multas
           </NavLink>
         )}
 
@@ -82,19 +106,22 @@ export function Layout() {
               to="/usuarios"
               className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
             >
-              <span>👤</span> Usuarios
+              <Users size={18} strokeWidth={2} aria-hidden />
+              Usuarios
             </NavLink>
             <NavLink
               to="/reportes"
               className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
             >
-              <span>📊</span> Reportes
+              <BarChart3 size={18} strokeWidth={2} aria-hidden />
+              Reportes
             </NavLink>
             <NavLink
               to="/auditoria"
               className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
             >
-              <span>🛡</span> Auditoría
+              <ShieldCheck size={18} strokeWidth={2} aria-hidden />
+              Auditoría
             </NavLink>
           </>
         )}
@@ -103,9 +130,15 @@ export function Layout() {
             to="/reportes"
             className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
           >
-            <span>📊</span> Reportes
+            <BarChart3 size={18} strokeWidth={2} aria-hidden />
+            Reportes
           </NavLink>
         )}
+
+        <div className="sidebar-footer">
+          <BookMarked size={14} strokeWidth={2} aria-hidden />
+          v1.0.0 · SQLite
+        </div>
       </aside>
 
       <main className="main">
@@ -119,6 +152,7 @@ export function Layout() {
             {ROLE_LABEL[user?.role ?? 'member']} · {user?.username}
             <div className="mt-1">
               <button className="btn secondary small" onClick={handleLogout}>
+                <LogOut size={14} strokeWidth={2} aria-hidden />
                 Cerrar sesión
               </button>
             </div>
