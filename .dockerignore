@@ -1,0 +1,31 @@
+# Control de versiones
+.git
+.gitignore
+
+# Dependencias y builds locales (se recrean dentro de la imagen)
+node_modules
+**/node_modules
+client/dist
+server/coverage
+
+# Datos locales de la base (se usa el volumen / la capa del contenedor)
+server/data
+*.db
+*.db-shm
+*.db-wal
+
+# Documentación y material no necesario para la ejecución
+docs
+database
+*.md
+
+# Evidencias, capturas y scripts de una sola corrida
+scripts
+client/scripts
+**/*.log
+
+# Entorno y editores
+.env
+.env.local
+.vscode
+.idea

@@ -1,0 +1,38 @@
+# ============================================================
+# Sistema de Gestión de Biblioteca — despliegue contenedorizado
+#
+#   docker compose up -d --build
+#   http://localhost:4000
+#
+# La base de datos se persiste en el volumen "biblioteca-data".
+# ============================================================
+services:
+  biblioteca:
+    build: .
+    image: sistema-biblioteca:latest
+    container_name: sistema-biblioteca
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: "4000"
+      CORS_ORIGIN: "*"
+      # En producción real, define una clave propia:
+      #   JWT_SECRET=...  (o usa un archivo .env junto a compose)
+      JWT_SECRET: ${JWT_SECRET:-cambiami-esta-clave-en-produccion-0123456789abcdef}
+    volumes:
+      - biblioteca-data:/app/server/data
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+    restart: unless-stopped
+
+volumes:
+  biblioteca-data:
