@@ -2,6 +2,8 @@ import cors from 'cors';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
+import { existsSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { env } from './config/env.js';
 import { clientIp } from './middleware/auth.js';
 import {
@@ -72,6 +74,19 @@ export function createApp(): express.Express {
   app.use('/api/fines', finesRoutes);
   app.use('/api/reports', reportsRoutes);
   app.use('/api/audit', auditRoutes);
+
+  // --- SPA estática (producción: sirve el build del frontend) ---
+  // En desarrollo local con `npm run dev` no existe ../client/dist y se omite.
+  const clientDist =
+    process.env.CLIENT_DIST_PATH ?? resolve(process.cwd(), '..', 'client', 'dist');
+  if (existsSync(clientDist)) {
+    app.use(express.static(clientDist));
+    // Fallback: cualquier GET que no sea /api/* devuelve index.html
+    // para que las rutas de React funcionen al recargar la página.
+    app.get(/^(?!\/api\/).*/, (_req, res) => {
+      res.sendFile(join(clientDist, 'index.html'));
+    });
+  }
 
   app.use(notFoundHandler);
   app.use(errorHandler);
