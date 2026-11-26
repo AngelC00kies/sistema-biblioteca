@@ -26,6 +26,7 @@ biblioteca/
 │   ├── 10-pruebas.md          # Estrategia, casos y evidencia de ejecución
 │   ├── 11-calidad.md          # ISO 25010
 │   ├── 12-gestion.md          # Planificación y trazabilidad
+│   ├── 13-despliegue.md       # Docker y publicación gratuita
 │   └── evidencias/            # Material crudo de la verificación
 │       ├── capturas/          # 16 PNG con nombre descriptivo (Playwright)
 │       ├── registros/         # Salidas UTF-8 de tsc, suite, cobertura, build, humo
@@ -51,6 +52,10 @@ biblioteca/
 │   │   └── utils/             # Auditoría y utilidades de fecha
 │   ├── tests/                 # 96 pruebas (Vitest + supertest)
 │   └── scripts/smoke.mjs      # Prueba de humo de extremo a extremo
+│
+├── Dockerfile                 # Imagen multi-stage: SPA + API en un solo puerto
+├── docker-compose.yml         # Servicio + volumen de datos + healthcheck
+├── .dockerignore              # Excluye node_modules, docs y datos locales
 │
 └── client/                    # SPA · React 18 + TypeScript + Vite
     ├── public/favicon.svg     # Icono del navegador (monograma SVG)
@@ -131,6 +136,29 @@ El servidor de desarrollo de Vite envía `/api` a `http://localhost:4000`
 | `lucia.fernandez` | `Socio1234` | Socio |
 | `carlos.ruiz` | `Socio1234` | Socio inactivo (bloqueado) |
 
+### 3.4 Despliegue con Docker (recomendado)
+
+La raíz incluye un `Dockerfile` de construcción en varias etapas y un `docker-compose.yml`
+con volumen de datos y sondeo de salud, de modo que **no se necesita Node.js instalado**:
+
+```bash
+docker compose up -d --build     # construye la imagen y levanta el servicio
+docker ps --filter "name=sistema-biblioteca"   # → (healthy)
+
+curl -s http://localhost:4000/api/health       # → {"ok":true,...}
+# La SPA queda disponible en http://localhost:4000
+
+docker compose down              # detener (los datos persisten en el volumen)
+docker compose down -v           # detener y borrar los datos
+```
+
+La imagen compila la SPA (Vite) y la sirve desde el propio Express, así que API e interfaz
+comparten el puerto 4000. El `seed` que se ejecuta al arrancar es **idempotente**: solo
+carga los datos de demostración si la base está vacía.
+
+Guía completa, publicación gratuita y limitaciones de los planes gratuitos:
+[`docs/13-despliegue.md`](docs/13-despliegue.md).
+
 ---
 
 ## 4. Pruebas
@@ -142,7 +170,7 @@ cd server && npm test
 # Cobertura
 npm run coverage
 
-# Prueba de humo contra la API en ejecución (16 pasos)
+# Prueba de humo contra la API en ejecución (16 pasos, desde server/)
 node scripts/smoke.mjs
 
 # Verificación de tipos
